@@ -939,6 +939,9 @@ input, select, textarea { font-family:inherit; }
       </div>
       <div class="auth-error" id="adminKeyError"></div>
       <button class="auth-btn auth-btn-primary" onclick="loginAsAdmin()">进入管理系统</button>
+      <div style="text-align:center;margin-top:12px;">
+        <a href="javascript:void(0)" onclick="showForgotKeyModal()" style="color:var(--accent-light);font-size:13px;">忘记密钥？通过安全问题找回</a>
+      </div>
     </div>
 
     <!-- Resident Login -->
@@ -1031,6 +1034,13 @@ input, select, textarea { font-family:inherit; }
     <div class="admin-section">
       <h3>🍽️ 食物修改申请 <span id="foodAppCount" style="background:var(--danger);color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px;">0</span></h3>
       <div id="adminFoodAppList"></div>
+    </div>
+    <!-- Admin Key Management -->
+    <div class="admin-section">
+      <h3>🔑 密钥管理</h3>
+      <button class="auth-btn auth-btn-primary" style="width:auto;padding:6px 16px;font-size:12px;margin-bottom:8px;" onclick="showChangeKeyModal()">✏️ 修改密钥</button>
+      <button class="auth-btn auth-btn-secondary" style="width:auto;padding:6px 16px;font-size:12px;" onclick="showSecurityQuestionModal()">🛡️ 设置安全问题</button>
+      <div id="securityQuestionStatus" style="margin-top:8px;font-size:12px;color:var(--text-muted);"></div>
     </div>
   </div>
 </aside>
@@ -1501,6 +1511,18 @@ const CloudSync = {
                 if (newApps.length > oldAppCount) {
                   showSyncNotification('📩 收到新的用户申请，请前往管理面板处理');
                 }
+                // Check if current user's upgrade application was approved
+                if (currentSession && currentSession.role === 'guest') {
+                  const myApprovedApp = (cloudData.applications || []).find(a =>
+                    a.userId === currentSession.userId &&
+                    a.type === 'upgrade' &&
+                    a.status === 'approved' &&
+                    a.generatedUsername
+                  );
+                  if (myApprovedApp) {
+                    showUpgradeApprovedModal(myApprovedApp);
+                  }
+                }
                 renderAdminSidebar();
               } catch(e) { console.error('Auth sync error:', e); }
               break;
@@ -1801,6 +1823,92 @@ function showSyncNotification(message) {
 async function sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ===== UPGRADE APPROVED MODAL =====
+function showUpgradeApprovedModal(app) {
+  // Remove existing modal if any
+  const existing = document.getElementById('upgradeApprovedModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'upgradeApprovedModal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `<div style="background:var(--card-bg);border-radius:16px;padding:32px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.4);text-align:center;">
+    <div style="font-size:48px;margin-bottom:12px;">🎉</div>
+    <h2 style="color:var(--accent-light);margin-bottom:8px;">申请已通过！</h2>
+    <p style="color:var(--text-muted);margin-bottom:20px;font-size:14px;">管理员已批准您的常驻用户申请，以下是您的登录凭据：</p>
+    <div style="background:var(--input-bg);border-radius:10px;padding:16px;margin-bottom:20px;text-align:left;">
+      <div style="margin-bottom:10px;"><span style="color:var(--text-muted);font-size:12px;">用户名</span><br><code style="font-size:18px;color:var(--accent-light);user-select:all;" id="approvedUsername">${app.generatedUsername}</code></div>
+      <div><span style="color:var(--text-muted);font-size:12px;">密码</span><br><code style="font-size:18px;color:var(--accent-light);user-select:all;" id="approvedPassword">${app.generatedPassword}</code></div>
+    </div>
+    <p style="color:var(--warning);font-size:12px;margin-bottom:16px;">请立即复制保存！登录后可在用户信息页面修改用户名和密码。</p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button onclick="copyApprovedCredentials()" style="padding:10px 20px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:14px;">📋 复制凭据</button>
+      <button onclick="loginWithApprovedCredentials('${app.generatedUsername}','${app.generatedPassword}')" style="padding:10px 20px;border-radius:8px;border:none;background:var(--success);color:#fff;cursor:pointer;font-size:14px;">🔑 立即登录</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+function copyApprovedCredentials() {
+  const username = document.getElementById('approvedUsername')?.textContent || '';
+  const password = document.getElementById('approvedPassword')?.textContent || '';
+  const text = `用户名: ${username}\n密码: ${password}`;
+  navigator.clipboard.writeText(text).then(() => {
+    showSyncNotification('✅ 凭据已复制到剪贴板');
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    showSyncNotification('✅ 凭据已复制到剪贴板');
+  });
+}
+
+async function loginWithApprovedCredentials(username, password) {
+  const hash = await sha256(password);
+  if (CloudSync.initialized && CloudSync.supabase) {
+    try {
+      const { data, error } = await CloudSync.supabase.rpc('verify_user_login', { p_name: username, p_password_hash: hash });
+      if (error) throw error;
+      if (data && data.success) {
+        const auth = getAuthData();
+        const days = auth.sessionDays !== undefined ? auth.sessionDays : 30;
+        const expiresAt = days > 0 ? Date.now() + days * 86400000 : 0;
+        saveSession({ role:'resident', userId:data.user_id, userName:data.name, expiresAt, loginAt: Date.now() });
+        currentUser = {
+          id: data.user_id, name: data.name, role: data.role,
+          gender: data.gender || 'male', age: data.age || 25, height: data.height || 170,
+          weight: data.weight || 65, bodyfat: data.bodyfat || 15, activity: data.activity || 'moderate',
+          trainingYears: data.training_years || 1, goal: data.goal || 'maintain',
+          grantedPermissions: data.granted_permissions || []
+        };
+        localStorage.setItem('nutripro_currentUser', JSON.stringify(currentUser));
+        const modal = document.getElementById('upgradeApprovedModal');
+        if (modal) modal.remove();
+        enterApp();
+        return;
+      }
+    } catch(e) { console.warn('Login with approved credentials failed:', e); }
+  }
+  // Fallback: local login
+  const users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
+  const user = users.find(u => u.name === username && u.passwordHash === hash);
+  if (user) {
+    const auth = getAuthData();
+    const days = auth.sessionDays !== undefined ? auth.sessionDays : 30;
+    const expiresAt = days > 0 ? Date.now() + days * 86400000 : 0;
+    saveSession({ role:'resident', userId:user.id, userName:user.name, expiresAt, loginAt: Date.now() });
+    currentUser = user;
+    localStorage.setItem('nutripro_currentUser', JSON.stringify(currentUser));
+    const modal = document.getElementById('upgradeApprovedModal');
+    if (modal) modal.remove();
+    enterApp();
+  } else {
+    alert('登录失败，请手动使用凭据登录');
+  }
 }
 
 // ===== AUTH SYSTEM =====
@@ -2288,6 +2396,8 @@ function renderAdminSidebar() {
   // Session duration
   const sel = document.getElementById('sessionDuration');
   if (sel) sel.value = auth.sessionDays !== undefined ? auth.sessionDays : 30;
+  // Update security question status
+  updateSecurityQuestionStatus();
 
   // Applications
   const apps = (auth.applications || []).filter(a => a.status === 'pending');
@@ -2429,21 +2539,56 @@ function approveApp(appId) {
 
   // Grant permission or upgrade
   if (app.type === 'upgrade') {
-    const users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
-    const user = users.find(u => u.id === app.userId);
-    if (user) {
-      user.role = 'resident';
-      user.passwordHash = user.passwordHash || '';
+    // Generate random username and password for the user
+    const genUsername = 'user_' + Math.random().toString(36).substring(2, 8);
+    const genPassword = Math.random().toString(36).substring(2, 10) + Math.floor(Math.random()*90+10);
+    const genPasswordHash = sha256(genPassword); // async, handled below
+
+    // Store generated credentials in the application for user notification
+    app.generatedUsername = genUsername;
+    app.generatedPassword = genPassword;
+
+    // Create resident user with generated credentials
+    genPasswordHash.then(hash => {
+      const users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
+      const newUser = {
+        id: app.userId || Date.now().toString(),
+        name: genUsername,
+        passwordHash: hash,
+        role: 'resident',
+        gender: 'male', age: 25, height: 170, weight: 65, bodyfat: 15,
+        activity: 'moderate', trainingYears: 1, goal: 'maintain',
+        grantedPermissions: [],
+        createdAt: Date.now(),
+        originalGuestId: app.userId
+      };
+      users.push(newUser);
       localStorage.setItem('nutripro_users', JSON.stringify(users));
       CloudSync.push('users', users);
       window.users = users;
-      // Also update Supabase users table
+
+      // Update Supabase: create user record and update application
       if (CloudSync.initialized && CloudSync.supabase) {
-        CloudSync.supabase.from('users').update({ role: 'resident' }).eq('id', app.userId).then(({error}) => {
-          if (error) console.warn('Failed to update user role in Supabase:', error);
+        CloudSync.supabase.from('users').insert({
+          id: newUser.id, name: genUsername, password_hash: hash, role: 'resident',
+          gender: 'male', age: 25, height: 170, weight: 65, bodyfat: 15,
+          activity: 'moderate', training_years: 1, goal: 'maintain', granted_permissions: []
+        }).then(({error}) => {
+          if (error) console.warn('Failed to create resident user in Supabase:', error);
+        });
+        CloudSync.supabase.from('applications').update({
+          status: 'approved', admin_reply: app.adminReply, processed_at: new Date().toISOString()
+        }).eq('id', appId).then(({error}) => {
+          if (error) console.warn('Failed to update application in Supabase:', error);
         });
       }
-    }
+
+      // Push updated auth data with generated credentials so user can receive them
+      saveAuthData(auth);
+      renderAdminSidebar();
+      applyPermissions();
+    });
+    return; // async handling above
   } else if (app.type === 'perm' && app.target) {
     if (!auth.userGrants) auth.userGrants = {};
     if (!auth.userGrants[app.userId]) auth.userGrants[app.userId] = [];
@@ -3047,6 +3192,22 @@ function renderUserForm() {
     return;
   }
   const u = currentUser;
+  // Show change username/password section for resident users
+  const credSection = role === 'resident' ? `
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px;">
+      <h4 style="color:var(--accent-light);margin-bottom:12px;">🔐 修改登录凭据</h4>
+      <div class="calc-row">
+        <div class="calc-field"><label>新用户名</label><input id="newUsername" value="${u.name}" placeholder="输入新用户名"></div>
+        <div class="calc-field"><label>当前密码</label><input id="currentPassword" type="password" placeholder="输入当前密码"></div>
+      </div>
+      <div class="calc-row">
+        <div class="calc-field"><label>新密码</label><input id="newPassword" type="password" placeholder="输入新密码（留空则不修改）"></div>
+        <div class="calc-field"><label>确认新密码</label><input id="confirmPassword" type="password" placeholder="再次输入新密码"></div>
+      </div>
+      <button class="btn-primary" onclick="changeResidentCredentials()" style="margin-top:8px;">💾 保存凭据修改</button>
+      <div id="credChangeMsg" style="margin-top:8px;font-size:13px;"></div>
+    </div>` : '';
+
   el.innerHTML = `<div class="calc-card"><h3>✏️ ${t('user_mgmt')}</h3>
     <form id="userForm" onsubmit="event.preventDefault();saveUserForm();">
       <div class="calc-row">
@@ -3078,8 +3239,338 @@ function renderUserForm() {
       </div>
       <button class="btn-primary" type="submit">${t('save')}</button>
     </form>
+    ${credSection}
   </div>`;
 }
+
+async function changeResidentCredentials() {
+  if (!currentSession || currentSession.role !== 'resident') return;
+  const msgEl = document.getElementById('credChangeMsg');
+  const newUsername = document.getElementById('newUsername').value.trim();
+  const currentPwd = document.getElementById('currentPassword').value;
+  const newPwd = document.getElementById('newPassword').value;
+  const confirmPwd = document.getElementById('confirmPassword').value;
+
+  if (!currentPwd) { msgEl.innerHTML = '<span style="color:var(--danger);">请输入当前密码以验证身份</span>'; return; }
+  if (!newUsername) { msgEl.innerHTML = '<span style="color:var(--danger);">用户名不能为空</span>'; return; }
+  if (newPwd && newPwd !== confirmPwd) { msgEl.innerHTML = '<span style="color:var(--danger);">两次输入的新密码不一致</span>'; return; }
+  if (newPwd && newPwd.length < 4) { msgEl.innerHTML = '<span style="color:var(--danger);">新密码长度至少4位</span>'; return; }
+
+  const currentHash = await sha256(currentPwd);
+
+  // Verify current password
+  if (CloudSync.initialized && CloudSync.supabase) {
+    try {
+      const { data, error } = await CloudSync.supabase.rpc('verify_user_login', { p_name: currentUser.name, p_password_hash: currentHash });
+      if (error) throw error;
+      if (!data || !data.success) { msgEl.innerHTML = '<span style="color:var(--danger);">当前密码错误</span>'; return; }
+    } catch(e) {
+      // Fallback to local check
+      if (currentHash !== currentUser.passwordHash) { msgEl.innerHTML = '<span style="color:var(--danger);">当前密码错误</span>'; return; }
+    }
+  } else {
+    if (currentHash !== currentUser.passwordHash) { msgEl.innerHTML = '<span style="color:var(--danger);">当前密码错误</span>'; return; }
+  }
+
+  // Update username and/or password
+  const updates = {};
+  if (newUsername !== currentUser.name) {
+    // Check if username already exists
+    const users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
+    if (users.find(u => u.name === newUsername && u.id !== currentUser.id)) {
+      msgEl.innerHTML = '<span style="color:var(--danger);">该用户名已被使用</span>'; return;
+    }
+    updates.name = newUsername;
+    currentUser.name = newUsername;
+  }
+  if (newPwd) {
+    const newHash = await sha256(newPwd);
+    updates.password_hash = newHash;
+    currentUser.passwordHash = newHash;
+  }
+
+  // Update Supabase
+  if (CloudSync.initialized && CloudSync.supabase && Object.keys(updates).length > 0) {
+    CloudSync.supabase.from('users').update(updates).eq('id', currentUser.id).then(({error}) => {
+      if (error) { msgEl.innerHTML = '<span style="color:var(--danger);">更新失败: ' + error.message + '</span>'; return; }
+    });
+  }
+
+  // Update local
+  const users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
+  const idx = users.findIndex(u => u.id === currentUser.id);
+  if (idx !== -1) {
+    if (updates.name) users[idx].name = updates.name;
+    if (updates.password_hash) users[idx].passwordHash = updates.password_hash;
+    localStorage.setItem('nutripro_users', JSON.stringify(users));
+    CloudSync.push('users', users);
+    window.users = users;
+  }
+  localStorage.setItem('nutripro_currentUser', JSON.stringify(currentUser));
+
+  // Update session
+  if (updates.name) {
+    currentSession.userName = updates.name;
+    localStorage.setItem('nutripro_session', JSON.stringify(currentSession));
+  }
+
+  msgEl.innerHTML = '<span style="color:var(--success);">✅ 凭据修改成功！</span>';
+  document.getElementById('currentPassword').value = '';
+  document.getElementById('newPassword').value = '';
+  document.getElementById('confirmPassword').value = '';
+  applyPermissions();
+  renderUserForm();
+}
+// ===== ADMIN KEY MANAGEMENT =====
+function showChangeKeyModal() {
+  const existing = document.getElementById('changeKeyModal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'changeKeyModal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `<div style="background:var(--card-bg);border-radius:16px;padding:32px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+    <h3 style="color:var(--accent-light);margin-bottom:16px;">🔑 修改管理员密钥</h3>
+    <div style="margin-bottom:12px;"><label style="font-size:13px;color:var(--text-muted);">当前密钥</label><input type="password" id="oldKeyInput" class="auth-input" placeholder="输入当前密钥" style="width:100%;"></div>
+    <div style="margin-bottom:12px;"><label style="font-size:13px;color:var(--text-muted);">新密钥</label><input type="password" id="newKeyInput" class="auth-input" placeholder="输入新密钥" style="width:100%;"></div>
+    <div style="margin-bottom:16px;"><label style="font-size:13px;color:var(--text-muted);">确认新密钥</label><input type="password" id="confirmKeyInput" class="auth-input" placeholder="再次输入新密钥" style="width:100%;"></div>
+    <div id="changeKeyMsg" style="margin-bottom:12px;font-size:13px;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="document.getElementById('changeKeyModal').remove()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);cursor:pointer;">取消</button>
+      <button onclick="changeAdminKey()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;">确认修改</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+async function changeAdminKey() {
+  const oldKey = document.getElementById('oldKeyInput').value.trim();
+  const newKey = document.getElementById('newKeyInput').value.trim();
+  const confirmKey = document.getElementById('confirmKeyInput').value.trim();
+  const msgEl = document.getElementById('changeKeyMsg');
+
+  if (!oldKey || !newKey || !confirmKey) { msgEl.innerHTML = '<span style="color:var(--danger);">请填写所有字段</span>'; return; }
+  if (newKey !== confirmKey) { msgEl.innerHTML = '<span style="color:var(--danger);">两次输入的新密钥不一致</span>'; return; }
+  if (newKey.length < 4) { msgEl.innerHTML = '<span style="color:var(--danger);">新密钥长度至少4位</span>'; return; }
+
+  const oldHash = await sha256(oldKey);
+  const newHash = await sha256(newKey);
+
+  // Verify old key via Supabase RPC
+  if (CloudSync.initialized && CloudSync.supabase) {
+    try {
+      const { data, error } = await CloudSync.supabase.rpc('change_admin_key', { p_old_key_hash: oldHash, p_new_key_hash: newHash });
+      if (error) throw error;
+      if (data && data.success) {
+        const auth = getAuthData();
+        auth.adminKeyHash = newHash;
+        saveAuthData(auth);
+        msgEl.innerHTML = '<span style="color:var(--success);">✅ 密钥修改成功！请使用新密钥登录。</span>';
+        setTimeout(() => { document.getElementById('changeKeyModal')?.remove(); }, 2000);
+        return;
+      } else {
+        msgEl.innerHTML = '<span style="color:var(--danger);">' + ((data && data.error) || '当前密钥错误') + '</span>';
+        return;
+      }
+    } catch(e) {
+      console.warn('Supabase change key failed, falling back to local:', e);
+    }
+  }
+  // Local fallback
+  const auth = getAuthData();
+  if (oldHash === auth.adminKeyHash) {
+    auth.adminKeyHash = newHash;
+    saveAuthData(auth);
+    msgEl.innerHTML = '<span style="color:var(--success);">✅ 密钥修改成功！请使用新密钥登录。</span>';
+    setTimeout(() => { document.getElementById('changeKeyModal')?.remove(); }, 2000);
+  } else {
+    msgEl.innerHTML = '<span style="color:var(--danger);">当前密钥错误</span>';
+  }
+}
+
+function showSecurityQuestionModal() {
+  const existing = document.getElementById('securityQuestionModal');
+  if (existing) existing.remove();
+  const auth = getAuthData();
+  const currentQuestion = auth.securityQuestion || '';
+  const modal = document.createElement('div');
+  modal.id = 'securityQuestionModal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `<div style="background:var(--card-bg);border-radius:16px;padding:32px;max-width:460px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+    <h3 style="color:var(--accent-light);margin-bottom:16px;">🛡️ 设置安全问题</h3>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">忘记密钥时可通过回答安全问题找回。${currentQuestion ? '当前已设置安全问题："' + currentQuestion + '"' : '尚未设置安全问题，建议立即设置。'}</p>
+    <div style="margin-bottom:12px;"><label style="font-size:13px;color:var(--text-muted);">安全问题</label><input id="secQuestion" class="auth-input" placeholder="例如：您的出生城市是？" value="${currentQuestion}" style="width:100%;"></div>
+    <div style="margin-bottom:12px;"><label style="font-size:13px;color:var(--text-muted);">答案</label><input id="secAnswer" class="auth-input" placeholder="输入安全问题的答案" style="width:100%;"></div>
+    <div style="margin-bottom:12px;"><label style="font-size:13px;color:var(--text-muted);">确认答案</label><input id="secAnswerConfirm" class="auth-input" placeholder="再次输入答案" style="width:100%;"></div>
+    <div style="margin-bottom:16px;"><label style="font-size:13px;color:var(--text-muted);">当前密钥（验证身份）</label><input type="password" id="secCurrentKey" class="auth-input" placeholder="输入当前管理员密钥" style="width:100%;"></div>
+    <div id="secQuestionMsg" style="margin-bottom:12px;font-size:13px;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="document.getElementById('securityQuestionModal').remove()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);cursor:pointer;">取消</button>
+      <button onclick="saveSecurityQuestion()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;">保存</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+async function saveSecurityQuestion() {
+  const question = document.getElementById('secQuestion').value.trim();
+  const answer = document.getElementById('secAnswer').value.trim();
+  const answerConfirm = document.getElementById('secAnswerConfirm').value.trim();
+  const currentKey = document.getElementById('secCurrentKey').value.trim();
+  const msgEl = document.getElementById('secQuestionMsg');
+
+  if (!question || !answer || !answerConfirm || !currentKey) { msgEl.innerHTML = '<span style="color:var(--danger);">请填写所有字段</span>'; return; }
+  if (answer !== answerConfirm) { msgEl.innerHTML = '<span style="color:var(--danger);">两次输入的答案不一致</span>'; return; }
+
+  const currentKeyHash = await sha256(currentKey);
+  const answerHash = await sha256(answer);
+
+  // Verify current key
+  if (CloudSync.initialized && CloudSync.supabase) {
+    try {
+      const { data, error } = await CloudSync.supabase.rpc('verify_admin_key', { p_key_hash: currentKeyHash });
+      if (error) throw error;
+      if (!data || !data.success) { msgEl.innerHTML = '<span style="color:var(--danger);">当前密钥错误</span>'; return; }
+      // Save to Supabase admin_config
+      await CloudSync.supabase.from('admin_config').upsert({
+        key: 'security', value: { question: question, answer_hash: answerHash }
+      });
+    } catch(e) {
+      // Fallback to local
+      const auth = getAuthData();
+      if (currentKeyHash !== auth.adminKeyHash) { msgEl.innerHTML = '<span style="color:var(--danger);">当前密钥错误</span>'; return; }
+    }
+  } else {
+    const auth = getAuthData();
+    if (currentKeyHash !== auth.adminKeyHash) { msgEl.innerHTML = '<span style="color:var(--danger);">当前密钥错误</span>'; return; }
+  }
+
+  // Save locally
+  const auth = getAuthData();
+  auth.securityQuestion = question;
+  auth.securityAnswerHash = answerHash;
+  saveAuthData(auth);
+
+  msgEl.innerHTML = '<span style="color:var(--success);">✅ 安全问题设置成功！</span>';
+  updateSecurityQuestionStatus();
+  setTimeout(() => { document.getElementById('securityQuestionModal')?.remove(); }, 1500);
+}
+
+function updateSecurityQuestionStatus() {
+  const el = document.getElementById('securityQuestionStatus');
+  if (!el) return;
+  const auth = getAuthData();
+  if (auth.securityQuestion) {
+    el.innerHTML = '<span style="color:var(--success);">✅ 已设置安全问题："' + auth.securityQuestion + '"</span>';
+  } else {
+    el.innerHTML = '<span style="color:var(--warning);">⚠️ 尚未设置安全问题，建议立即设置以便找回密钥</span>';
+  }
+}
+
+function showForgotKeyModal() {
+  const existing = document.getElementById('forgotKeyModal');
+  if (existing) existing.remove();
+
+  // Check if security question is set (try Supabase first, then local)
+  const modal = document.createElement('div');
+  modal.id = 'forgotKeyModal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `<div style="background:var(--card-bg);border-radius:16px;padding:32px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+    <h3 style="color:var(--accent-light);margin-bottom:16px;">🔑 找回管理员密钥</h3>
+    <div id="forgotKeyStep1">
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">正在检查安全问题设置...</p>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+
+  // Load security question from Supabase or local
+  loadSecurityQuestionForReset();
+}
+
+async function loadSecurityQuestionForReset() {
+  const stepEl = document.getElementById('forgotKeyStep1');
+  let question = '';
+  let answerHash = '';
+
+  if (CloudSync.initialized && CloudSync.supabase) {
+    try {
+      const { data, error } = await CloudSync.supabase.from('admin_config').select('value').eq('key', 'security').single();
+      if (data && data.value) {
+        question = data.value.question || '';
+        answerHash = data.value.answer_hash || '';
+      }
+    } catch(e) { /* fallback to local */ }
+  }
+
+  if (!question) {
+    const auth = getAuthData();
+    question = auth.securityQuestion || '';
+    answerHash = auth.securityAnswerHash || '';
+  }
+
+  if (!question) {
+    stepEl.innerHTML = '<p style="color:var(--danger);">未设置安全问题，无法通过此方式找回密钥。请联系系统管理员。</p><button onclick="document.getElementById(\'forgotKeyModal\').remove()" style="margin-top:12px;padding:8px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;">返回</button>';
+    return;
+  }
+
+  stepEl.innerHTML = `
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px;">请回答以下安全问题以验证身份：</p>
+    <div style="background:var(--input-bg);border-radius:8px;padding:12px;margin-bottom:16px;font-weight:bold;color:var(--accent-light);">${question}</div>
+    <div style="margin-bottom:12px;"><input id="forgotAnswer" class="auth-input" placeholder="输入安全问题的答案" style="width:100%;"></div>
+    <div style="margin-bottom:12px;"><label style="font-size:13px;color:var(--text-muted);">新密钥</label><input type="password" id="forgotNewKey" class="auth-input" placeholder="输入新密钥" style="width:100%;"></div>
+    <div style="margin-bottom:16px;"><label style="font-size:13px;color:var(--text-muted);">确认新密钥</label><input type="password" id="forgotConfirmKey" class="auth-input" placeholder="再次输入新密钥" style="width:100%;"></div>
+    <div id="forgotKeyMsg" style="margin-bottom:12px;font-size:13px;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="document.getElementById('forgotKeyModal').remove()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);cursor:pointer;">取消</button>
+      <button onclick="resetKeyViaQuestion('${answerHash}')" style="padding:8px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;">重置密钥</button>
+    </div>`;
+}
+
+async function resetKeyViaQuestion(expectedAnswerHash) {
+  const answer = document.getElementById('forgotAnswer').value.trim();
+  const newKey = document.getElementById('forgotNewKey').value.trim();
+  const confirmKey = document.getElementById('forgotConfirmKey').value.trim();
+  const msgEl = document.getElementById('forgotKeyMsg');
+
+  if (!answer || !newKey || !confirmKey) { msgEl.innerHTML = '<span style="color:var(--danger);">请填写所有字段</span>'; return; }
+  if (newKey !== confirmKey) { msgEl.innerHTML = '<span style="color:var(--danger);">两次输入的新密钥不一致</span>'; return; }
+  if (newKey.length < 4) { msgEl.innerHTML = '<span style="color:var(--danger);">新密钥长度至少4位</span>'; return; }
+
+  const answerHash = await sha256(answer);
+  if (answerHash !== expectedAnswerHash) { msgEl.innerHTML = '<span style="color:var(--danger);">安全问题答案错误</span>'; return; }
+
+  const newKeyHash = await sha256(newKey);
+
+  // Update via Supabase RPC
+  if (CloudSync.initialized && CloudSync.supabase) {
+    try {
+      const { data, error } = await CloudSync.supabase.rpc('reset_admin_key_via_question', {
+        p_answer_hash: answerHash, p_new_key_hash: newKeyHash
+      });
+      if (error) throw error;
+      if (data && data.success) {
+        const auth = getAuthData();
+        auth.adminKeyHash = newKeyHash;
+        saveAuthData(auth);
+        msgEl.innerHTML = '<span style="color:var(--success);">✅ 密钥重置成功！请使用新密钥登录。</span>';
+        setTimeout(() => { document.getElementById('forgotKeyModal')?.remove(); }, 2000);
+        return;
+      } else {
+        msgEl.innerHTML = '<span style="color:var(--danger);">' + ((data && data.error) || '验证失败') + '</span>';
+        return;
+      }
+    } catch(e) {
+      console.warn('Supabase reset key failed, falling back to local:', e);
+    }
+  }
+
+  // Local fallback
+  const auth = getAuthData();
+  auth.adminKeyHash = newKeyHash;
+  saveAuthData(auth);
+  msgEl.innerHTML = '<span style="color:var(--success);">✅ 密钥重置成功！请使用新密钥登录。</span>';
+  setTimeout(() => { document.getElementById('forgotKeyModal')?.remove(); }, 2000);
+}
+
 function exportUsers() {
   const blob = new Blob([JSON.stringify({users,currentUser,allDietData},null,2)], {type:'application/json'});
   const a = document.createElement('a'); a.href=URL.createObjectURL(blob);

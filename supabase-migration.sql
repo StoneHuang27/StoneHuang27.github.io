@@ -321,6 +321,51 @@ BEGIN
 END;
 $$;
 
+-- ===== RPC 函数: 修改管理员密钥 =====
+CREATE OR REPLACE FUNCTION change_admin_key(
+    p_old_key_hash VARCHAR,
+    p_new_key_hash VARCHAR
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_stored_hash VARCHAR;
+BEGIN
+    SELECT value->>'adminKeyHash' INTO v_stored_hash FROM admin_config WHERE key = 'auth';
+    IF v_stored_hash IS NULL OR v_stored_hash != p_old_key_hash THEN
+        RETURN jsonb_build_object('success', false, 'error', '当前密钥错误');
+    END IF;
+    UPDATE admin_config SET value = jsonb_set(value, '{adminKeyHash}', to_jsonb(p_new_key_hash)) WHERE key = 'auth';
+    RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- ===== RPC 函数: 通过安全问题重置管理员密钥 =====
+CREATE OR REPLACE FUNCTION reset_admin_key_via_question(
+    p_answer_hash VARCHAR,
+    p_new_key_hash VARCHAR
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_stored_answer_hash VARCHAR;
+BEGIN
+    SELECT value->>'answer_hash' INTO v_stored_answer_hash FROM admin_config WHERE key = 'security';
+    IF v_stored_answer_hash IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'error', '未设置安全问题');
+    END IF;
+    IF v_stored_answer_hash != p_answer_hash THEN
+        RETURN jsonb_build_object('success', false, 'error', '安全问题答案错误');
+    END IF;
+    UPDATE admin_config SET value = jsonb_set(value, '{adminKeyHash}', to_jsonb(p_new_key_hash)) WHERE key = 'auth';
+    RETURN jsonb_build_object('success', true);
+END;
+$$;
+
 -- ===== 触发器: 自动更新 updated_at =====
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$
