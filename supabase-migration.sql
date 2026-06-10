@@ -106,53 +106,81 @@ ALTER TABLE admin_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sync_data ENABLE ROW LEVEL SECURITY;
 
 -- 通用策略: 认证用户可读取
+DROP POLICY IF EXISTS "authenticated_read" ON users;
 CREATE POLICY "authenticated_read" ON users FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "authenticated_read" ON invite_codes;
 CREATE POLICY "authenticated_read" ON invite_codes FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "authenticated_read" ON applications;
 CREATE POLICY "authenticated_read" ON applications FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "authenticated_read" ON user_permissions;
 CREATE POLICY "authenticated_read" ON user_permissions FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "authenticated_read" ON admin_config;
 CREATE POLICY "authenticated_read" ON admin_config FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "authenticated_read" ON sync_data;
 CREATE POLICY "authenticated_read" ON sync_data FOR SELECT TO authenticated USING (true);
 
 -- 饮食记录: 用户只能操作自己的
+DROP POLICY IF EXISTS "diet_read_own" ON diet_records;
 CREATE POLICY "diet_read_own" ON diet_records FOR SELECT TO authenticated
     USING (user_id = auth.jwt() ->> 'user_id' OR user_id = auth.uid()::text);
+DROP POLICY IF EXISTS "diet_insert_own" ON diet_records;
 CREATE POLICY "diet_insert_own" ON diet_records FOR INSERT TO authenticated
     WITH CHECK (user_id = auth.jwt() ->> 'user_id' OR user_id = auth.uid()::text);
+DROP POLICY IF EXISTS "diet_update_own" ON diet_records;
 CREATE POLICY "diet_update_own" ON diet_records FOR UPDATE TO authenticated
     USING (user_id = auth.jwt() ->> 'user_id' OR user_id = auth.uid()::text);
+DROP POLICY IF EXISTS "diet_delete_own" ON diet_records;
 CREATE POLICY "diet_delete_own" ON diet_records FOR DELETE TO authenticated
     USING (user_id = auth.jwt() ->> 'user_id' OR user_id = auth.uid()::text);
 
 -- 匿名访问策略 (游客模式需要基本读取)
+DROP POLICY IF EXISTS "anon_read_users" ON users;
 CREATE POLICY "anon_read_users" ON users FOR SELECT TO anon USING (true);
+DROP POLICY IF EXISTS "anon_read_invite" ON invite_codes;
 CREATE POLICY "anon_read_invite" ON invite_codes FOR SELECT TO anon USING (is_used = false);
+DROP POLICY IF EXISTS "anon_read_sync" ON sync_data;
 CREATE POLICY "anon_read_sync" ON sync_data FOR SELECT TO anon USING (true);
 
 -- sync_data 写入策略 (认证用户和管理员)
+DROP POLICY IF EXISTS "sync_write_authenticated" ON sync_data;
 CREATE POLICY "sync_write_authenticated" ON sync_data FOR ALL TO authenticated USING (true);
+DROP POLICY IF EXISTS "sync_write_anon" ON sync_data;
 CREATE POLICY "sync_write_anon" ON sync_data FOR INSERT TO anon WITH CHECK (true);
+DROP POLICY IF EXISTS "sync_update_anon" ON sync_data;
 CREATE POLICY "sync_update_anon" ON sync_data FOR UPDATE TO anon USING (true);
 
 -- invite_codes 写入策略
+DROP POLICY IF EXISTS "invite_insert_authenticated" ON invite_codes;
 CREATE POLICY "invite_insert_authenticated" ON invite_codes FOR INSERT TO authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "invite_update_authenticated" ON invite_codes;
 CREATE POLICY "invite_update_authenticated" ON invite_codes FOR UPDATE TO authenticated USING (true);
+DROP POLICY IF EXISTS "invite_delete_authenticated" ON invite_codes;
 CREATE POLICY "invite_delete_authenticated" ON invite_codes FOR DELETE TO authenticated USING (true);
 
 -- applications 写入策略
+DROP POLICY IF EXISTS "app_insert_authenticated" ON applications;
 CREATE POLICY "app_insert_authenticated" ON applications FOR INSERT TO authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "app_update_authenticated" ON applications;
 CREATE POLICY "app_update_authenticated" ON applications FOR UPDATE TO authenticated USING (true);
 
 -- users 写入策略
+DROP POLICY IF EXISTS "users_insert_authenticated" ON users;
 CREATE POLICY "users_insert_authenticated" ON users FOR INSERT TO authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "users_update_authenticated" ON users;
 CREATE POLICY "users_update_authenticated" ON users FOR UPDATE TO authenticated USING (true);
 
 -- admin_config 写入策略
+DROP POLICY IF EXISTS "admin_config_write" ON admin_config;
 CREATE POLICY "admin_config_write" ON admin_config FOR ALL TO authenticated USING (true);
+DROP POLICY IF EXISTS "admin_config_write_anon" ON admin_config;
 CREATE POLICY "admin_config_write_anon" ON admin_config FOR ALL TO anon USING (true);
 
 -- user_permissions 写入策略
+DROP POLICY IF EXISTS "perm_insert_authenticated" ON user_permissions;
 CREATE POLICY "perm_insert_authenticated" ON user_permissions FOR INSERT TO authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "perm_update_authenticated" ON user_permissions;
 CREATE POLICY "perm_update_authenticated" ON user_permissions FOR UPDATE TO authenticated USING (true);
+DROP POLICY IF EXISTS "perm_delete_authenticated" ON user_permissions;
 CREATE POLICY "perm_delete_authenticated" ON user_permissions FOR DELETE TO authenticated USING (true);
 
 -- ===== 初始数据 =====
@@ -375,11 +403,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS users_updated_at ON users;
 CREATE TRIGGER users_updated_at BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DROP TRIGGER IF EXISTS diet_records_updated_at ON diet_records;
 CREATE TRIGGER diet_records_updated_at BEFORE UPDATE ON diet_records
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DROP TRIGGER IF EXISTS admin_config_updated_at ON admin_config;
 CREATE TRIGGER admin_config_updated_at BEFORE UPDATE ON admin_config
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DROP TRIGGER IF EXISTS sync_data_updated_at ON sync_data;
 CREATE TRIGGER sync_data_updated_at BEFORE UPDATE ON sync_data
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();

@@ -1517,9 +1517,11 @@ const CloudSync = {
                     a.userId === currentSession.userId &&
                     a.type === 'upgrade' &&
                     a.status === 'approved' &&
-                    a.generatedUsername
+                    a.generatedUsername &&
+                    !a._notified
                   );
                   if (myApprovedApp) {
+                    myApprovedApp._notified = true;
                     showUpgradeApprovedModal(myApprovedApp);
                   }
                 }
@@ -2528,7 +2530,7 @@ function deleteInviteCode(code) {
   renderAdminSidebar();
 }
 
-function approveApp(appId) {
+async function approveApp(appId) {
   const auth = getAuthData();
   const app = (auth.applications || []).find(a => a.id === appId);
   if (!app) return;
@@ -2542,52 +2544,50 @@ function approveApp(appId) {
     // Generate random username and password for the user
     const genUsername = 'user_' + Math.random().toString(36).substring(2, 8);
     const genPassword = Math.random().toString(36).substring(2, 10) + Math.floor(Math.random()*90+10);
-    const genPasswordHash = sha256(genPassword); // async, handled below
+    const genPasswordHash = await sha256(genPassword);
 
     // Store generated credentials in the application for user notification
     app.generatedUsername = genUsername;
     app.generatedPassword = genPassword;
 
     // Create resident user with generated credentials
-    genPasswordHash.then(hash => {
-      const users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
-      const newUser = {
-        id: app.userId || Date.now().toString(),
-        name: genUsername,
-        passwordHash: hash,
-        role: 'resident',
+    const users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
+    const newUser = {
+      id: app.userId || Date.now().toString(),
+      name: genUsername,
+      passwordHash: genPasswordHash,
+      role: 'resident',
+      gender: 'male', age: 25, height: 170, weight: 65, bodyfat: 15,
+      activity: 'moderate', trainingYears: 1, goal: 'maintain',
+      grantedPermissions: [],
+      createdAt: Date.now(),
+      originalGuestId: app.userId
+    };
+    users.push(newUser);
+    localStorage.setItem('nutripro_users', JSON.stringify(users));
+    CloudSync.push('users', users);
+    window.users = users;
+
+    // Update Supabase: create user record and update application
+    if (CloudSync.initialized && CloudSync.supabase) {
+      CloudSync.supabase.from('users').insert({
+        id: newUser.id, name: genUsername, password_hash: genPasswordHash, role: 'resident',
         gender: 'male', age: 25, height: 170, weight: 65, bodyfat: 15,
-        activity: 'moderate', trainingYears: 1, goal: 'maintain',
-        grantedPermissions: [],
-        createdAt: Date.now(),
-        originalGuestId: app.userId
-      };
-      users.push(newUser);
-      localStorage.setItem('nutripro_users', JSON.stringify(users));
-      CloudSync.push('users', users);
-      window.users = users;
+        activity: 'moderate', training_years: 1, goal: 'maintain', granted_permissions: []
+      }).then(({error}) => {
+        if (error) console.warn('Failed to create resident user in Supabase:', error);
+      });
+      CloudSync.supabase.from('applications').update({
+        status: 'approved', admin_reply: app.adminReply, processed_at: new Date().toISOString()
+      }).eq('id', appId).then(({error}) => {
+        if (error) console.warn('Failed to update application in Supabase:', error);
+      });
+    }
 
-      // Update Supabase: create user record and update application
-      if (CloudSync.initialized && CloudSync.supabase) {
-        CloudSync.supabase.from('users').insert({
-          id: newUser.id, name: genUsername, password_hash: hash, role: 'resident',
-          gender: 'male', age: 25, height: 170, weight: 65, bodyfat: 15,
-          activity: 'moderate', training_years: 1, goal: 'maintain', granted_permissions: []
-        }).then(({error}) => {
-          if (error) console.warn('Failed to create resident user in Supabase:', error);
-        });
-        CloudSync.supabase.from('applications').update({
-          status: 'approved', admin_reply: app.adminReply, processed_at: new Date().toISOString()
-        }).eq('id', appId).then(({error}) => {
-          if (error) console.warn('Failed to update application in Supabase:', error);
-        });
-      }
-
-      // Push updated auth data with generated credentials so user can receive them
-      saveAuthData(auth);
-      renderAdminSidebar();
-      applyPermissions();
-    });
+    // Push updated auth data with generated credentials so user can receive them
+    saveAuthData(auth);
+    renderAdminSidebar();
+    applyPermissions();
     return; // async handling above
   } else if (app.type === 'perm' && app.target) {
     if (!auth.userGrants) auth.userGrants = {};
@@ -3563,8 +3563,12 @@ async function resetKeyViaQuestion(expectedAnswerHash) {
     }
   }
 
-  // Local fallback
+  // Local fallback — verify answer hash against locally stored value
   const auth = getAuthData();
+  if (auth.securityAnswerHash && answerHash !== auth.securityAnswerHash) {
+    msgEl.innerHTML = '<span style="color:var(--danger);">安全问题答案错误</span>';
+    return;
+  }
   auth.adminKeyHash = newKeyHash;
   saveAuthData(auth);
   msgEl.innerHTML = '<span style="color:var(--success);">✅ 密钥重置成功！请使用新密钥登录。</span>';
