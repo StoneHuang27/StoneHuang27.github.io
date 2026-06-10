@@ -6,29 +6,72 @@
 <title>NutriPro 运动营养数据平台</title>
 <script>
 // Supabase SDK (replaces Firebase — accessible in China without VPN)
+// Correct UMD path: auto-resolve via CDN (no /dist/supabase.min.js — that path does NOT exist)
+// jsDelivr auto-resolves package.json "browser" field → dist/umd/supabase.min.js
 (function loadSupabase(){
-  var bases = [
-    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/',
-    'https://unpkg.com/@supabase/supabase-js@2/dist/',
-    'https://cdn.bootcdn.net/ajax/libs/supabase-js/2/dist/'
+  // Each entry is a FULL URL (no path concatenation needed)
+  var urls = [
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+    'https://unpkg.com/@supabase/supabase-js@2',
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'
   ];
   var idx = 0;
+  window._supabaseLoadAttempted = false;
   function tryLoad() {
-    var base = bases[idx];
+    if (window._supabaseReady) return;
+    window._supabaseLoadAttempted = true;
+    var url = urls[idx];
     var s = document.createElement('script');
-    s.src = base + 'supabase.min.js';
-    s.onload = function() { window._supabaseReady = true; };
-    s.onerror = function() {
-      idx++;
-      if (idx < bases.length) { tryLoad(); }
-      else {
-        console.warn('Supabase SDK load failed, cloud sync unavailable');
-        window._supabaseLoadFailed = true;
+    s.src = url;
+    s.onload = function() {
+      if (typeof supabase !== 'undefined' && supabase.createClient) {
+        window._supabaseReady = true;
+        console.log('Supabase SDK loaded from:', url);
+        document.dispatchEvent(new CustomEvent('supabase-sdk-ready'));
+      } else {
+        console.warn('Supabase script loaded but global not found from:', url);
+        idx++;
+        if (idx < urls.length) { tryLoad(); }
+        else { markFailed(); }
       }
     };
+    s.onerror = function() {
+      console.warn('Supabase SDK failed to load from:', url);
+      idx++;
+      if (idx < urls.length) { tryLoad(); }
+      else { markFailed(); }
+    };
+    // Timeout: if no response in 10s, try next CDN
+    var timer = setTimeout(function() {
+      if (!window._supabaseReady && idx < urls.length && s.parentNode) {
+        console.warn('Supabase SDK timeout from:', url, '- trying next...');
+        s.onload = s.onerror = null;
+        s.remove();
+        idx++;
+        if (idx < urls.length) { tryLoad(); }
+        else { markFailed(); }
+      }
+    }, 10000);
+    // Clear timer on success/failure to avoid stale triggers
+    var origOnload = s.onload;
+    var origOnerror = s.onerror;
+    s.onload = function() { clearTimeout(timer); origOnload(); };
+    s.onerror = function() { clearTimeout(timer); origOnerror(); };
     document.head.appendChild(s);
   }
+  function markFailed() {
+    console.warn('All Supabase CDNs failed, cloud sync unavailable');
+    window._supabaseLoadFailed = true;
+    document.dispatchEvent(new CustomEvent('supabase-sdk-failed'));
+  }
   tryLoad();
+  // Expose retry function for manual trigger
+  window.retrySupabaseSDK = function() {
+    window._supabaseReady = false;
+    window._supabaseLoadFailed = false;
+    idx = 0;
+    tryLoad();
+  };
 })();
 </script>
 <script>
@@ -1266,10 +1309,11 @@ input, select, textarea { font-family:inherit; }
           <label>Supabase 配置（JSON 格式）</label>
           <textarea id="firebaseConfigInput" placeholder='{"url":"https://xxxxx.supabase.co","anonKey":"eyJhbG..."}' style="width:100%;height:100px;background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-size:12px;font-family:monospace;resize:vertical;"></textarea>
         </div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn-primary" onclick="saveFirebaseConfig()">💾 保存并连接</button>
           <button class="btn-action" onclick="testFirebaseConnection()" style="padding:8px 16px;">🔍 测试连接</button>
           <button class="btn-action" onclick="disconnectFirebase()" style="padding:8px 16px;color:var(--danger);">🗑️ 断开云同步</button>
+          <button id="retrySdkBtn" class="btn-action" onclick="retrySupabaseSDK();updateSdkStatus();" style="padding:8px 16px;color:var(--warning);display:none;">🔄 重试加载 SDK</button>
         </div>
         <div id="firebaseStatus" style="margin-top:12px;font-size:13px;"></div>
       </div>
@@ -1333,8 +1377,16 @@ const CloudSync = {
       return false;
     }
     try {
+      // Wait for Supabase SDK if not yet loaded (up to 10 seconds)
       if (typeof supabase === 'undefined' || !supabase.createClient) {
-        this.lastError = 'Supabase SDK 未加载（可能被网络屏蔽）';
+        var _waited = 0;
+        while ((typeof supabase === 'undefined' || !supabase.createClient) && !window._supabaseLoadFailed && _waited < 10000) {
+          await new Promise(function(r) { setTimeout(r, 200); });
+          _waited += 200;
+        }
+      }
+      if (typeof supabase === 'undefined' || !supabase.createClient) {
+        this.lastError = 'Supabase SDK 未加载（网络问题或CDN不可达）。可点击"重试加载SDK"按钮重试。';
         return false;
       }
       this.supabase = supabase.createClient(config.url, config.anonKey);
@@ -1571,6 +1623,26 @@ function openFirebaseConfig() {
   } else {
     document.getElementById('firebaseStatus').innerHTML = '<span style="color:var(--text-muted);">未配置云同步。请输入 Supabase 项目 URL 和 Anon Key。</span>';
   }
+  // Show SDK status
+  updateSdkStatus();
+}
+function updateSdkStatus() {
+  var btn = document.getElementById('retrySdkBtn');
+  var statusEl = document.getElementById('firebaseStatus');
+  if (!btn || !statusEl) return;
+  if (window._supabaseReady) {
+    btn.style.display = 'none';
+    // Don't overwrite existing status message if it already shows success/error
+  } else if (window._supabaseLoadFailed) {
+    btn.style.display = 'inline-flex';
+    // Append SDK warning to existing status
+    var current = statusEl.innerHTML;
+    if (current.indexOf('SDK') === -1 && current.indexOf('sdk') === -1) {
+      statusEl.innerHTML = current + '<br><span style="color:var(--warning);margin-top:4px;display:inline-block;">⚠️ Supabase SDK 未加载（所有CDN源均失败），云同步功能不可用。点击"重试加载 SDK"按钮重试。</span>';
+    }
+  } else {
+    btn.style.display = 'inline-flex';
+  }
 }
 function closeFirebaseConfig() {
   document.getElementById('firebaseConfigModal').classList.remove('show');
@@ -1610,6 +1682,15 @@ async function saveFirebaseConfig() {
     SUPABASE_CONFIG.url = config.url;
     SUPABASE_CONFIG.anonKey = config.anonKey;
     statusEl.innerHTML = '<span style="color:var(--warning);">⏳ 正在连接...</span>';
+    // Wait for SDK if needed before init
+    if (typeof supabase === 'undefined' || !supabase.createClient) {
+      statusEl.innerHTML = '<span style="color:var(--warning);">⏳ 等待 SDK 加载...</span>';
+      var _sw = 0;
+      while ((typeof supabase === 'undefined' || !supabase.createClient) && !window._supabaseLoadFailed && _sw < 10000) {
+        await new Promise(function(r) { setTimeout(r, 200); });
+        _sw += 200;
+      }
+    }
     const success = await CloudSync.init();
     if (success) {
       await CloudSync.pullAll();
@@ -1640,10 +1721,23 @@ async function testFirebaseConnection() {
     statusEl.innerHTML = '<span style="color:var(--danger);">❌ 请先输入配置</span>';
     return;
   }
+  // Wait for Supabase SDK to be ready (up to 15 seconds)
+  if (typeof supabase === 'undefined' || !supabase.createClient) {
+    statusEl.innerHTML = '<span style="color:var(--warning);">⏳ 等待 SDK 加载...</span>';
+    var waited = 0;
+    while ((typeof supabase === 'undefined' || !supabase.createClient) && !window._supabaseLoadFailed && waited < 15000) {
+      await new Promise(function(r) { setTimeout(r, 300); });
+      waited += 300;
+    }
+  }
   try {
     const config = parseFirebaseConfig(input);
     if (!config.url || !config.anonKey) throw new Error('缺少必要字段 (url, anonKey)');
-    if (typeof supabase === 'undefined') throw new Error('Supabase SDK 未加载，请刷新页面');
+    if (typeof supabase === 'undefined' || !supabase.createClient) {
+      // SDK still not loaded — offer retry
+      statusEl.innerHTML = '<span style="color:var(--danger);">❌ 连接失败: Supabase SDK 未加载。<button onclick="retrySupabaseSDK();testFirebaseConnection();" style="background:var(--accent);border:none;color:#fff;padding:4px 12px;border-radius:4px;cursor:pointer;margin-left:8px;font-size:12px;">点击重试加载</button></span>';
+      return;
+    }
     const testClient = supabase.createClient(config.url, config.anonKey);
     const { data, error } = await testClient.from('admin_config').select('key').limit(1);
     if (error) throw error;
@@ -4168,18 +4262,18 @@ function init() {
 
 // ===== CLOUD SYNC INIT =====
 async function initCloudSync() {
-  // Wait for Supabase SDK to load (max 8 seconds)
+  // Wait for Supabase SDK to load (max 15 seconds — increased from 8s)
   let waited = 0;
-  while (!window._supabaseReady && !window._supabaseLoadFailed && waited < 8000) {
-    await new Promise(r => setTimeout(r, 200));
+  while (!window._supabaseReady && !window._supabaseLoadFailed && waited < 15000) {
+    await new Promise(function(r) { setTimeout(r, 200); });
     waited += 200;
   }
   if (!window._supabaseReady) {
     console.warn('CloudSync: Supabase SDK not loaded, cloud sync disabled');
     if (window._supabaseLoadFailed) {
-      CloudSync.lastError = 'Supabase SDK 加载失败。请检查网络连接。';
+      CloudSync.lastError = 'Supabase SDK 加载失败。请检查网络连接，或点击"重试加载SDK"按钮。';
     } else {
-      CloudSync.lastError = 'Supabase SDK 加载超时';
+      CloudSync.lastError = 'Supabase SDK 加载超时（15秒）。请检查网络后重试。';
     }
     const indicator = document.getElementById('syncIndicator');
     if (indicator && SUPABASE_CONFIG.url !== 'SUPABASE_URL_PLACEHOLDER') {
