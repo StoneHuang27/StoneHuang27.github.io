@@ -2055,6 +2055,17 @@ async function registerResident() {
       if (error) throw error;
       if (data && data.success) {
         const auth = getAuthData();
+        // Mark invite code as used in local auth data and sync to cloud
+        const codes = auth.inviteCodes || [];
+        const codeIdx = codes.findIndex(c => c.code === invite && !c.used);
+        if (codeIdx !== -1) {
+          codes[codeIdx].used = true;
+          codes[codeIdx].usedBy = name;
+          codes[codeIdx].usedAt = Date.now();
+          auth.inviteCodes = codes;
+          saveAuthData(auth);
+          CloudSync.push('auth', auth);
+        }
         const days = auth.sessionDays !== undefined ? auth.sessionDays : 30;
         const expiresAt = days > 0 ? Date.now() + days * 86400000 : 0;
         saveSession({ role:'resident', userId:data.user_id, userName:data.name, expiresAt, loginAt: Date.now() });
@@ -2381,9 +2392,9 @@ function generateInviteCode() {
   if (!auth.inviteCodes) auth.inviteCodes = [];
   auth.inviteCodes.push({ code, createdAt: Date.now(), used: false });
   saveAuthData(auth);
-  // Also save to Supabase invite_codes table
+  // Save to Supabase invite_codes table via RPC (bypasses RLS)
   if (CloudSync.initialized && CloudSync.supabase) {
-    CloudSync.supabase.from('invite_codes').insert({ code: code, is_used: false }).then(({error}) => {
+    CloudSync.supabase.rpc('create_invite_code', { p_code: code }).then(({data, error}) => {
       if (error) console.warn('Failed to save invite code to Supabase:', error);
     });
   }
@@ -2398,6 +2409,12 @@ function deleteInviteCode(code) {
   const auth = getAuthData();
   auth.inviteCodes = (auth.inviteCodes || []).filter(c => c.code !== code);
   saveAuthData(auth);
+  // Also delete from Supabase invite_codes table via RPC (bypasses RLS)
+  if (CloudSync.initialized && CloudSync.supabase) {
+    CloudSync.supabase.rpc('delete_invite_code', { p_code: code }).then(({data, error}) => {
+      if (error) console.warn('Failed to delete invite code from Supabase:', error);
+    });
+  }
   renderAdminSidebar();
 }
 

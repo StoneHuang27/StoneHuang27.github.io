@@ -269,6 +269,58 @@ BEGIN
 END;
 $$;
 
+-- ===== RPC 函数: 创建邀请码 (绕过RLS) =====
+CREATE OR REPLACE FUNCTION create_invite_code(
+    p_code VARCHAR
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_id UUID;
+    v_existing INTEGER;
+BEGIN
+    -- 检查邀请码是否已存在
+    SELECT COUNT(*) INTO v_existing FROM invite_codes WHERE code = p_code;
+    IF v_existing > 0 THEN
+        RETURN jsonb_build_object('success', false, 'error', '邀请码已存在');
+    END IF;
+
+    INSERT INTO invite_codes (code, is_used)
+    VALUES (p_code, false)
+    RETURNING id INTO v_id;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'id', v_id::text,
+        'code', p_code
+    );
+END;
+$$;
+
+-- ===== RPC 函数: 删除邀请码 (绕过RLS) =====
+CREATE OR REPLACE FUNCTION delete_invite_code(
+    p_code VARCHAR
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_deleted INTEGER;
+BEGIN
+    DELETE FROM invite_codes WHERE code = p_code AND is_used = false;
+    GET DIAGNOSTICS v_deleted = ROW_COUNT;
+
+    IF v_deleted = 0 THEN
+        RETURN jsonb_build_object('success', false, 'error', '邀请码不存在或已被使用');
+    END IF;
+
+    RETURN jsonb_build_object('success', true, 'deleted_count', v_deleted);
+END;
+$$;
+
 -- ===== 触发器: 自动更新 updated_at =====
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$
