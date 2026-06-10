@@ -5,41 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NutriPro 运动营养数据平台</title>
 <script>
-// Firebase SDK (loaded dynamically with fallback)
-(function loadFirebase(){
+// Supabase SDK (replaces Firebase — accessible in China without VPN)
+(function loadSupabase(){
   var bases = [
-    'https://www.gstatic.com/firebasejs/10.12.2/',
-    'https://cdn.jsdelivr.net/npm/firebase@10.12.2/',
-    'https://unpkg.com/firebase@10.12.2/',
-    'https://cdn.bootcdn.net/ajax/libs/firebase/10.12.2/'
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/',
+    'https://unpkg.com/@supabase/supabase-js@2/dist/',
+    'https://cdn.bootcdn.net/ajax/libs/supabase-js/2/dist/'
   ];
   var idx = 0;
   function tryLoad() {
     var base = bases[idx];
-    var scripts = [
-      base + 'firebase-app-compat.js',
-      base + 'firebase-firestore-compat.js',
-      base + 'firebase-auth-compat.js'
-    ];
-    var loaded = 0, failed = false;
-    scripts.forEach(function(src) {
-      var s = document.createElement('script');
-      s.src = src;
-      s.onload = function() {
-        loaded++;
-        if (loaded === scripts.length && !failed) { window._firebaseReady = true; }
-      };
-      s.onerror = function() {
-        failed = true;
-        idx++;
-        if (idx < bases.length) { tryLoad(); }
-        else {
-          console.warn('Firebase SDK load failed, cloud sync unavailable');
-          window._firebaseLoadFailed = true;
-        }
-      };
-      document.head.appendChild(s);
-    });
+    var s = document.createElement('script');
+    s.src = base + 'supabase.min.js';
+    s.onload = function() { window._supabaseReady = true; };
+    s.onerror = function() {
+      idx++;
+      if (idx < bases.length) { tryLoad(); }
+      else {
+        console.warn('Supabase SDK load failed, cloud sync unavailable');
+        window._supabaseLoadFailed = true;
+      }
+    };
+    document.head.appendChild(s);
   }
   tryLoad();
 })();
@@ -1258,27 +1245,26 @@ input, select, textarea { font-family:inherit; }
   </div>
 </div>
 
-<!-- ===== FIREBASE CONFIG MODAL ===== -->
+<!-- ===== SUPABASE CONFIG MODAL ===== -->
 <div class="modal-overlay" id="firebaseConfigModal">
   <div class="modal" style="max-width:580px;">
     <div class="modal-header">
-      <h2>☁️ 云同步设置</h2>
+      <h2>☁️ 云同步设置 (Supabase)</h2>
       <button class="modal-close" onclick="closeFirebaseConfig()">&times;</button>
     </div>
     <div class="modal-body">
       <div id="firebaseSetupGuide">
-        <p style="color:var(--text-muted);margin-bottom:12px;font-size:13px;">配置 Firebase 后，数据可在多设备间实时同步。无需后端服务器。</p>
+        <p style="color:var(--text-muted);margin-bottom:12px;font-size:13px;">配置 Supabase 后，数据可在多设备间实时同步。国内直连，无需翻墙。</p>
         <div style="background:var(--input-bg);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:16px;font-size:12px;line-height:1.8;">
           <strong style="color:var(--accent-light);">📋 设置步骤：</strong><br>
-          1. 访问 <a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent);">Firebase 控制台</a>，创建项目<br>
-          2. 添加 Web 应用，复制配置对象<br>
-          3. 启用 <strong>Cloud Firestore</strong>（测试模式）<br>
-          4. 启用 <strong>Authentication</strong> → 匿名登录<br>
-          5. 将配置粘贴到下方
+          1. 访问 <a href="https://supabase.com" target="_blank" style="color:var(--accent);">supabase.com</a>，注册并创建项目（选新加坡/东京区域）<br>
+          2. 在 SQL Editor 中执行建表脚本<br>
+          3. 进入 Settings → API，复制 Project URL 和 anon public key<br>
+          4. 将配置粘贴到下方
         </div>
         <div class="calc-field" style="margin-bottom:12px;">
-          <label>Firebase 配置（JSON 格式）</label>
-          <textarea id="firebaseConfigInput" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}' style="width:100%;height:120px;background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-size:12px;font-family:monospace;resize:vertical;"></textarea>
+          <label>Supabase 配置（JSON 格式）</label>
+          <textarea id="firebaseConfigInput" placeholder='{"url":"https://xxxxx.supabase.co","anonKey":"eyJhbG..."}' style="width:100%;height:100px;background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-size:12px;font-family:monospace;resize:vertical;"></textarea>
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn-primary" onclick="saveFirebaseConfig()">💾 保存并连接</button>
@@ -1319,72 +1305,50 @@ input, select, textarea { font-family:inherit; }
 // NUTRIPRO - 运动营养数据平台
 // ============================================================
 
-// ===== DEFAULT FIREBASE CONFIG =====
-const DEFAULT_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAFXRxGXnInxyoP48pVt_gxANBivhWPOfw",
-  authDomain: "hs--sportsnurition.firebaseapp.com",
-  projectId: "hs--sportsnurition",
-  storageBucket: "hs--sportsnurition.firebasestorage.app",
-  messagingSenderId: "994763821765",
-  appId: "1:994763821765:web:89e15692acb1e8b89f96ac"
+// ===== SUPABASE CONFIG =====
+// Replace with your Supabase project credentials after creating the project
+const SUPABASE_CONFIG = {
+  url: 'https://daurcikmobtdpwowdsyg.supabase.co',
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhdXJjaWttb2J0ZHB3b3dkc3lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NTM0MzEsImV4cCI6MjA5NjEyOTQzMX0.jUFk1g-rcrOalTuQLuiDW3hHuDY3IUvmk-hPoUL95Qg'
 };
 
-// ===== CLOUD SYNC MODULE (Firebase Firestore) =====
+// ===== CLOUD SYNC MODULE (Supabase — China accessible) =====
 const CloudSync = {
-  db: null,
-  auth: null,
+  supabase: null,
   initialized: false,
   syncing: false,
-  unsubscribers: [],
+  channel: null,
   pollTimer: null,
-
-  // Initialize Firebase from saved config or default
   lastError: null,
+
   async init() {
-    const savedConfig = localStorage.getItem('nutripro_firebaseConfig');
-    const config = savedConfig ? JSON.parse(savedConfig) : DEFAULT_FIREBASE_CONFIG;
-    if (!config || !config.apiKey) { this.lastError = '缺少 Firebase 配置'; return false; }
+    const savedConfig = localStorage.getItem('nutripro_supabaseConfig');
+    const config = savedConfig ? JSON.parse(savedConfig) : SUPABASE_CONFIG;
+    if (!config || !config.url || config.url === 'SUPABASE_URL_PLACEHOLDER') {
+      this.lastError = '请先配置 Supabase 连接信息';
+      return false;
+    }
+    if (!config.anonKey || config.anonKey === 'SUPABASE_ANON_KEY_PLACEHOLDER') {
+      this.lastError = '缺少 Supabase Anon Key';
+      return false;
+    }
     try {
-      if (typeof firebase === 'undefined') { this.lastError = 'Firebase SDK 未加载（可能被网络屏蔽）'; return false; }
-      if (!firebase.apps || firebase.apps.length === 0) {
-        firebase.initializeApp(config);
-      }
-      this.db = firebase.firestore();
-      this.auth = firebase.auth();
-      // Sign in anonymously for access
-      try {
-        await this.auth.signInAnonymously();
-      } catch(authErr) {
-        if (authErr.code === 'auth/admin-restricted-operation' || authErr.code === 'auth/operation-not-allowed') {
-          this.lastError = '匿名登录未启用 — 请在 Firebase 控制台 → Authentication → 开启「匿名」登录方式';
-        } else if (authErr.code === 'auth/network-request-failed') {
-          this.lastError = '网络请求失败 — 可能原因：1) 当前在本地文件(file://)打开，需部署到 https 网站；2) 网络被屏蔽，请尝试科学上网';
-        } else {
-          this.lastError = '认证失败: ' + authErr.message;
-        }
-        this.updateIndicator('error');
+      if (typeof supabase === 'undefined' || !supabase.createClient) {
+        this.lastError = 'Supabase SDK 未加载（可能被网络屏蔽）';
         return false;
       }
-      // Test Firestore access
-      try {
-        await this.db.collection('nutripro_data').doc('_ping').set({ ping: true, at: firebase.firestore.FieldValue.serverTimestamp() });
-      } catch(fsErr) {
-        if (fsErr.code === 'permission-denied' || (fsErr.message && fsErr.message.includes('permissions'))) {
-          this.lastError = 'Firestore 权限被拒绝 — 请确保数据库已创建且使用「测试模式」';
-        } else if (fsErr.code === 'unavailable' || fsErr.code === 'deadline-exceeded' || (fsErr.message && fsErr.message.includes('network'))) {
-          this.lastError = 'Firestore 网络不可达 — 请检查网络连接，如在国内请尝试科学上网';
-        } else if (fsErr.message && fsErr.message.includes('not found')) {
-          this.lastError = 'Firestore 未启用 — 请在 Firebase 控制台创建 Firestore 数据库';
-        } else {
-          this.lastError = 'Firestore 访问失败: ' + fsErr.message;
-        }
+      this.supabase = supabase.createClient(config.url, config.anonKey);
+      // Test connection — read admin_config
+      const { data, error } = await this.supabase.from('admin_config').select('key').limit(1);
+      if (error) {
+        this.lastError = '数据库连接失败: ' + error.message;
         this.updateIndicator('error');
         return false;
       }
       this.initialized = true;
       this.lastError = null;
       this.updateIndicator('connected');
-      console.log('CloudSync: Firebase connected');
+      console.log('CloudSync: Supabase connected');
       return true;
     } catch(e) {
       console.error('CloudSync init error:', e);
@@ -1394,34 +1358,39 @@ const CloudSync = {
     }
   },
 
-  // Push data to Firestore
+  // Push data to Supabase sync_data table
   async push(key, data) {
-    if (!this.initialized || !this.db) return;
+    if (!this.initialized || !this.supabase) return;
     try {
-      const docRef = this.db.collection('nutripro_data').doc(key);
-      await docRef.set({ data: JSON.parse(JSON.stringify(data)), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      const { error } = await this.supabase
+        .from('sync_data')
+        .upsert({ key: key, data: JSON.parse(JSON.stringify(data)), updated_at: new Date().toISOString() });
+      if (error) console.error('CloudSync push error:', key, error);
     } catch(e) {
       console.error('CloudSync push error:', key, e);
-      this.updateIndicator('error');
     }
   },
 
-  // Pull data from Firestore
+  // Pull data from Supabase sync_data table
   async pull(key) {
-    if (!this.initialized || !this.db) return null;
+    if (!this.initialized || !this.supabase) return null;
     try {
-      const doc = await this.db.collection('nutripro_data').doc(key).get();
-      if (doc.exists) return doc.data().data;
-      return null;
+      const { data, error } = await this.supabase
+        .from('sync_data')
+        .select('data')
+        .eq('key', key)
+        .single();
+      if (error || !data) return null;
+      return data.data;
     } catch(e) {
       console.error('CloudSync pull error:', key, e);
       return null;
     }
   },
 
-  // Pull all shared data from Firestore and update localStorage
+  // Pull all shared data from Supabase and update localStorage
   async pullAll() {
-    if (!this.initialized || !this.db) return;
+    if (!this.initialized || !this.supabase) return;
     this.syncing = true;
     this.updateIndicator('syncing');
     try {
@@ -1450,71 +1419,74 @@ const CloudSync = {
     this.updateIndicator('connected');
   },
 
-  // Set up real-time listeners for remote changes
+  // Set up real-time subscription via Supabase Realtime
   listen() {
-    if (!this.initialized || !this.db) return;
-    // Clean up old listeners
-    this.unsubscribers.forEach(unsub => unsub());
-    this.unsubscribers = [];
+    if (!this.initialized || !this.supabase) return;
+    // Clean up old channel
+    if (this.channel) {
+      this.supabase.removeChannel(this.channel);
+      this.channel = null;
+    }
 
     const self = this;
-    const keys = ['auth', 'users', 'diet'];
-    keys.forEach(key => {
-      const unsub = self.db.collection('nutripro_data').doc(key)
-        .onSnapshot(doc => {
-          if (self.syncing) return; // skip during pullAll
-          if (doc.exists) {
-            const cloudData = doc.data().data;
-            console.log('CloudSync: Received update for', key, cloudData);
-            switch(key) {
-              case 'auth':
-                localStorage.setItem('nutripro_auth', JSON.stringify(cloudData));
-                // Refresh auth-related in-memory data
-                try {
-                  // Check for new applications and notify
-                  const oldAuth = getAuthData();
-                  const newApps = (cloudData.applications || []).filter(a => a.status === 'pending');
-                  const oldAppCount = (oldAuth.applications || []).filter(a => a.status === 'pending').length;
-                  if (newApps.length > oldAppCount) {
-                    showSyncNotification('📩 收到新的用户申请，请前往管理面板处理');
-                  }
-                  renderAdminSidebar();
-                } catch(e) { console.error('Auth sync error:', e); }
-                break;
-              case 'users':
-                localStorage.setItem('nutripro_users', JSON.stringify(cloudData));
-                users = cloudData;
-                // Refresh current user reference
-                if (currentUser) {
-                  currentUser = users.find(u => u.id === currentUser.id) || currentUser;
-                  localStorage.setItem('nutripro_currentUser', JSON.stringify(currentUser));
+    this.channel = this.supabase
+      .channel('nutripro-sync')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'sync_data' },
+        (payload) => {
+          if (self.syncing) return;
+          const key = payload.new?.key;
+          if (!key) return;
+          const cloudData = payload.new?.data;
+          console.log('CloudSync: Received update for', key);
+          switch(key) {
+            case 'auth':
+              localStorage.setItem('nutripro_auth', JSON.stringify(cloudData));
+              try {
+                const newApps = (cloudData.applications || []).filter(a => a.status === 'pending');
+                const oldAuth = getAuthData();
+                const oldAppCount = (oldAuth.applications || []).filter(a => a.status === 'pending').length;
+                if (newApps.length > oldAppCount) {
+                  showSyncNotification('📩 收到新的用户申请，请前往管理面板处理');
                 }
-                renderUsers();
-                renderUserForm();
-                break;
-              case 'diet':
-                localStorage.setItem('nutripro_allDietData', JSON.stringify(cloudData));
-                allDietData = cloudData;
-                renderDietFoods();
-                break;
-            }
+                renderAdminSidebar();
+              } catch(e) { console.error('Auth sync error:', e); }
+              break;
+            case 'users':
+              localStorage.setItem('nutripro_users', JSON.stringify(cloudData));
+              users = cloudData;
+              if (currentUser) {
+                currentUser = users.find(u => u.id === currentUser.id) || currentUser;
+                localStorage.setItem('nutripro_currentUser', JSON.stringify(currentUser));
+              }
+              renderUsers();
+              renderUserForm();
+              break;
+            case 'diet':
+              localStorage.setItem('nutripro_allDietData', JSON.stringify(cloudData));
+              allDietData = cloudData;
+              renderDietFoods();
+              break;
           }
-        }, error => {
-          console.error('CloudSync listen error for', key, error);
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('CloudSync: Realtime subscribed');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('CloudSync: Realtime error', status);
           self.updateIndicator('error');
-          self.lastError = '实时监听断开: ' + error.message;
-          showSyncNotification('⚠️ 云同步连接断开，点击头部图标重试');
-        });
-      self.unsubscribers.push(unsub);
-    });
+          self.lastError = '实时同步断开，将使用轮询模式';
+          showSyncNotification('⚠️ 实时同步断开，切换到轮询模式');
+        }
+      });
 
-    // Periodic polling as fallback (every 30s) in case onSnapshot fails due to network issues
+    // Periodic polling as fallback (every 30s)
     if (self.pollTimer) clearInterval(self.pollTimer);
     self.pollTimer = setInterval(async () => {
       if (!self.initialized || self.syncing) return;
       try {
         await self.pullAll();
-        // Refresh in-memory data
         const newUsers = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
         const newDiet = JSON.parse(localStorage.getItem('nutripro_allDietData') || '{}');
         if (JSON.stringify(newUsers) !== JSON.stringify(users)) {
@@ -1527,7 +1499,6 @@ const CloudSync = {
           allDietData = newDiet;
           renderDietFoods();
         }
-        // Check for new applications
         const auth = getAuthData();
         const appCountEl = document.getElementById('appCount');
         const pendingCount = (auth.applications || []).filter(a => a.status === 'pending').length;
@@ -1537,9 +1508,7 @@ const CloudSync = {
             showSyncNotification('📩 收到新的用户申请');
           }
         }
-      } catch(e) {
-        // Silently fail - polling is best-effort
-      }
+      } catch(e) { /* silently fail */ }
     }, 30000);
   },
 
@@ -1551,7 +1520,7 @@ const CloudSync = {
     switch(status) {
       case 'connected':
         el.textContent = '☁️';
-        el.title = '云同步已连接';
+        el.title = '云同步已连接 (Supabase)';
         el.style.color = 'var(--success)';
         break;
       case 'syncing':
@@ -1574,99 +1543,85 @@ const CloudSync = {
 
   // Disconnect and clean up
   disconnect() {
-    this.unsubscribers.forEach(unsub => unsub());
-    this.unsubscribers = [];
+    if (this.channel && this.supabase) {
+      this.supabase.removeChannel(this.channel);
+      this.channel = null;
+    }
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
     this.initialized = false;
-    this.db = null;
-    this.auth = null;
+    this.supabase = null;
     this.lastError = null;
-    localStorage.removeItem('nutripro_firebaseConfig');
+    localStorage.removeItem('nutripro_supabaseConfig');
     const el = document.getElementById('syncIndicator');
     if (el) el.style.display = 'none';
-    // Remove Firebase app if exists
-    try { if (firebase.apps.length) firebase.app().delete(); } catch(e) {}
   }
 };
 
-// Firebase config UI functions
+// Supabase config UI functions
 function openFirebaseConfig() {
   const modal = document.getElementById('firebaseConfigModal');
   modal.classList.add('show');
-  const savedConfig = localStorage.getItem('nutripro_firebaseConfig');
+  const savedConfig = localStorage.getItem('nutripro_supabaseConfig');
   if (savedConfig) {
     document.getElementById('firebaseConfigInput').value = JSON.stringify(JSON.parse(savedConfig), null, 2);
     document.getElementById('firebaseStatus').innerHTML = '<span style="color:var(--success);">✅ 已配置，当前状态: ' + (CloudSync.initialized ? '已连接' : '未连接') + '</span>';
-  } else if (DEFAULT_FIREBASE_CONFIG.apiKey) {
-    document.getElementById('firebaseConfigInput').value = JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2);
-    document.getElementById('firebaseStatus').innerHTML = '<span style="color:var(--warning);">⚠️ 使用默认配置，尚未连接。请确保已启用 Firestore 和匿名登录后点击「保存并连接」。</span>';
+  } else if (SUPABASE_CONFIG.url !== 'SUPABASE_URL_PLACEHOLDER') {
+    document.getElementById('firebaseConfigInput').value = JSON.stringify(SUPABASE_CONFIG, null, 2);
+    document.getElementById('firebaseStatus').innerHTML = '<span style="color:var(--warning);">⚠️ 使用默认配置，尚未连接。点击「保存并连接」。</span>';
   } else {
-    document.getElementById('firebaseStatus').innerHTML = '<span style="color:var(--text-muted);">未配置云同步</span>';
+    document.getElementById('firebaseStatus').innerHTML = '<span style="color:var(--text-muted);">未配置云同步。请输入 Supabase 项目 URL 和 Anon Key。</span>';
   }
 }
 function closeFirebaseConfig() {
   document.getElementById('firebaseConfigModal').classList.remove('show');
 }
 
-// Smart parser: handles JSON, JS object literal, and const firebaseConfig = {...} format
+// Parse Supabase config (JSON with url and anonKey)
 function parseFirebaseConfig(input) {
-  let str = input.trim();
-  // Remove trailing semicolons
-  str = str.replace(/;\s*$/, '');
-  // Remove "const firebaseConfig = " or "var firebaseConfig = " prefix
+  let str = input.trim().replace(/;\s*$/, '');
   str = str.replace(/^(?:const|let|var)\s+\w+\s*=\s*/, '');
-  // Try standard JSON parse first
   try { return JSON.parse(str); } catch(e) {}
-  // Fix JS object literal → valid JSON
-  // 1. Add double quotes around unquoted keys
   let fixed = str.replace(/([{,]\s*)(\w+)\s*:/g, '$1"$2":');
-  // 2. Remove trailing commas before } or ]
   fixed = fixed.replace(/,\s*([}\]])/g, '$1');
-  // 3. Replace single quotes with double quotes (careful with values)
   fixed = fixed.replace(/'/g, '"');
   try { return JSON.parse(fixed); } catch(e2) {}
-  // Last resort: eval (safe because it's user's own config)
   try {
     const obj = (new Function('return (' + input + ')'))();
-    if (obj && typeof obj === 'object' && obj.apiKey) return obj;
+    if (obj && typeof obj === 'object' && (obj.url || obj.anonKey)) return obj;
   } catch(e3) {}
-  throw new Error('无法解析配置。请粘贴 Firebase 控制台提供的完整配置代码。');
+  throw new Error('无法解析配置。请粘贴 Supabase 项目设置中的 URL 和 Anon Key。');
 }
 
 async function saveFirebaseConfig() {
   const input = document.getElementById('firebaseConfigInput').value.trim();
   const statusEl = document.getElementById('firebaseStatus');
   if (!input) {
-    statusEl.innerHTML = '<span style="color:var(--danger);">❌ 请输入 Firebase 配置</span>';
+    statusEl.innerHTML = '<span style="color:var(--danger);">❌ 请输入 Supabase 配置</span>';
     return;
   }
   try {
     const config = parseFirebaseConfig(input);
-    if (!config.apiKey || !config.projectId) {
-      throw new Error('缺少必要字段 (apiKey, projectId)');
+    if (!config.url || !config.anonKey) {
+      throw new Error('缺少必要字段 (url, anonKey)');
     }
-    // Disconnect old instance first
     CloudSync.disconnect();
-    // Save config
-    localStorage.setItem('nutripro_firebaseConfig', JSON.stringify(config));
-    // Try to initialize
+    localStorage.setItem('nutripro_supabaseConfig', JSON.stringify(config));
+    // Update runtime config
+    SUPABASE_CONFIG.url = config.url;
+    SUPABASE_CONFIG.anonKey = config.anonKey;
     statusEl.innerHTML = '<span style="color:var(--warning);">⏳ 正在连接...</span>';
     const success = await CloudSync.init();
     if (success) {
-      // Pull existing cloud data
       await CloudSync.pullAll();
-      // Set up listeners
       CloudSync.listen();
       // Push current local data if cloud is empty
       const cloudAuth = await CloudSync.pull('auth');
       if (!cloudAuth) {
-        // First time: push all local data to cloud
         await CloudSync.push('auth', JSON.parse(localStorage.getItem('nutripro_auth') || '{}'));
         await CloudSync.push('users', JSON.parse(localStorage.getItem('nutripro_users') || '[]'));
         await CloudSync.push('diet', JSON.parse(localStorage.getItem('nutripro_allDietData') || '{}'));
       }
-      statusEl.innerHTML = '<span style="color:var(--success);">✅ 云同步已连接！数据将自动同步到所有设备。</span>';
-      // Refresh in-memory data after pull
+      statusEl.innerHTML = '<span style="color:var(--success);">✅ Supabase 云同步已连接！数据将自动同步到所有设备。</span>';
       users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
       allDietData = JSON.parse(localStorage.getItem('nutripro_allDietData') || '{}');
       renderUsers();
@@ -1687,26 +1642,15 @@ async function testFirebaseConnection() {
   }
   try {
     const config = parseFirebaseConfig(input);
-    if (!config.apiKey || !config.projectId) throw new Error('缺少必要字段 (apiKey, projectId)');
-    if (typeof firebase === 'undefined') throw new Error('Firebase SDK 未加载（可能被网络屏蔽，请尝试刷新页面或开启科学上网）');
-    // Temporarily initialize to test
-    const appName = 'test-' + Date.now();
-    const testApp = firebase.initializeApp(config, appName);
-    const testDb = testApp.firestore();
-    // Try to write a test document
-    await testDb.collection('nutripro_data').doc('_ping').set({ ping: true, at: firebase.firestore.FieldValue.serverTimestamp() });
-    await testApp.delete();
-    statusEl.innerHTML = '<span style="color:var(--success);">✅ 连接测试成功！Firestore 可读写。</span>';
+    if (!config.url || !config.anonKey) throw new Error('缺少必要字段 (url, anonKey)');
+    if (typeof supabase === 'undefined') throw new Error('Supabase SDK 未加载，请刷新页面');
+    const testClient = supabase.createClient(config.url, config.anonKey);
+    const { data, error } = await testClient.from('admin_config').select('key').limit(1);
+    if (error) throw error;
+    statusEl.innerHTML = '<span style="color:var(--success);">✅ 连接测试成功！Supabase 可读写。</span>';
   } catch(e) {
     let msg = e.message || '未知错误';
-    if (e.code === 'auth/admin-restricted-operation' || e.code === 'auth/operation-not-allowed') {
-      msg = '匿名登录未启用 — 请在 Firebase 控制台 → Authentication → 开启「匿名」';
-    } else if (e.code === 'permission-denied' || (msg && msg.includes('permission'))) {
-      msg = 'Firestore 权限被拒 — 请确保使用「测试模式」创建数据库';
-    }
     statusEl.innerHTML = '<span style="color:var(--danger);">❌ 连接失败: ' + msg + '</span>';
-    // Clean up test app
-    try { firebase.app(appName)?.delete(); } catch(e2) {}
   }
 }
 function disconnectFirebase() {
@@ -1910,6 +1854,27 @@ async function loginAsAdmin() {
   const errEl = document.getElementById('adminKeyError');
   if (!key) { errEl.textContent = '请输入管理员密钥'; return; }
   const hash = await sha256(key);
+  // Try Supabase backend verification first
+  if (CloudSync.initialized && CloudSync.supabase) {
+    try {
+      const { data, error } = await CloudSync.supabase.rpc('verify_admin_key', { p_key_hash: hash });
+      if (error) throw error;
+      if (data && data.success) {
+        const auth2 = getAuthData();
+        const days = auth2.sessionDays !== undefined ? auth2.sessionDays : 30;
+        const expiresAt = days > 0 ? Date.now() + days * 86400000 : 0;
+        saveSession({ role:'admin', userId:'admin', userName:'管理员', expiresAt, loginAt: Date.now() });
+        enterApp();
+        return;
+      } else {
+        errEl.textContent = (data && data.error) || '密钥错误，请重新输入';
+        return;
+      }
+    } catch(e) {
+      console.warn('Supabase admin verify failed, falling back to local:', e);
+    }
+  }
+  // Fallback to local verification
   const auth = getAuthData();
   if (hash === auth.adminKeyHash) {
     const auth2 = getAuthData();
@@ -1927,16 +1892,45 @@ async function loginAsResident() {
   const pwd = document.getElementById('residentPwdInput').value;
   const errEl = document.getElementById('residentLoginError');
   if (!name || !pwd) { errEl.textContent = '请输入用户名和密码'; return; }
+  const hash = await sha256(pwd);
+  // Try Supabase backend verification first
+  if (CloudSync.initialized && CloudSync.supabase) {
+    try {
+      const { data, error } = await CloudSync.supabase.rpc('verify_user_login', { p_name: name, p_password_hash: hash });
+      if (error) throw error;
+      if (data && data.success) {
+        const auth = getAuthData();
+        const days = auth.sessionDays !== undefined ? auth.sessionDays : 30;
+        const expiresAt = days > 0 ? Date.now() + days * 86400000 : 0;
+        saveSession({ role:'resident', userId:data.user_id, userName:data.name, expiresAt, loginAt: Date.now() });
+        currentUser = {
+          id: data.user_id, name: data.name, role: data.role,
+          gender: data.gender || 'male', age: data.age || 25, height: data.height || 170,
+          weight: data.weight || 65, bodyfat: data.bodyfat || 15, activity: data.activity || 'moderate',
+          trainingYears: data.training_years || 1, goal: data.goal || 'maintain',
+          grantedPermissions: data.granted_permissions || []
+        };
+        localStorage.setItem('nutripro_currentUser', JSON.stringify(currentUser));
+        enterApp();
+        checkQuickUserSelect();
+        return;
+      } else {
+        errEl.textContent = (data && data.error) || '登录失败';
+        return;
+      }
+    } catch(e) {
+      console.warn('Supabase login failed, falling back to local:', e);
+    }
+  }
+  // Fallback to local verification
   const users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
   const user = users.find(u => u.name === name && u.role === 'resident');
   if (!user) { errEl.textContent = '用户名不存在或非常驻用户'; return; }
-  const hash = await sha256(pwd);
   if (hash !== user.passwordHash) { errEl.textContent = '密码错误'; return; }
   const auth = getAuthData();
   const days = auth.sessionDays !== undefined ? auth.sessionDays : 30;
   const expiresAt = days > 0 ? Date.now() + days * 86400000 : 0;
   saveSession({ role:'resident', userId:user.id, userName:user.name, expiresAt, loginAt: Date.now() });
-  // Also set as current user for calculators etc
   currentUser = user;
   localStorage.setItem('nutripro_currentUser', JSON.stringify(currentUser));
   enterApp();
@@ -1955,6 +1949,43 @@ async function registerResident() {
   if (!pwd || pwd.length < 6) { errEl.textContent = '密码至少6位'; return; }
   if (pwd !== pwd2) { errEl.textContent = '两次密码不一致'; return; }
 
+  const hash = await sha256(pwd);
+  // Try Supabase backend registration first
+  if (CloudSync.initialized && CloudSync.supabase) {
+    try {
+      const { data, error } = await CloudSync.supabase.rpc('register_with_invite', {
+        p_invite_code: invite,
+        p_name: name,
+        p_password_hash: hash
+      });
+      if (error) throw error;
+      if (data && data.success) {
+        const auth = getAuthData();
+        const days = auth.sessionDays !== undefined ? auth.sessionDays : 30;
+        const expiresAt = days > 0 ? Date.now() + days * 86400000 : 0;
+        saveSession({ role:'resident', userId:data.user_id, userName:data.name, expiresAt, loginAt: Date.now() });
+        currentUser = {
+          id: data.user_id, name: data.name, role: 'resident',
+          gender: 'male', age: 25, height: 170, weight: 65,
+          bodyfat: 15, activity: 'moderate', trainingYears: 1, goal: 'maintain',
+          grantedPermissions: []
+        };
+        localStorage.setItem('nutripro_currentUser', JSON.stringify(currentUser));
+        // Pull updated data from cloud
+        await CloudSync.pullAll();
+        users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
+        enterApp();
+        checkQuickUserSelect();
+        return;
+      } else {
+        errEl.textContent = (data && data.error) || '注册失败';
+        return;
+      }
+    } catch(e) {
+      console.warn('Supabase register failed, falling back to local:', e);
+    }
+  }
+  // Fallback to local registration
   const auth = getAuthData();
   const codes = auth.inviteCodes || [];
   const codeIdx = codes.findIndex(c => c.code === invite && !c.used);
@@ -1963,7 +1994,6 @@ async function registerResident() {
   const users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
   if (users.find(u => u.name === name)) { errEl.textContent = '用户名已存在'; return; }
 
-  const hash = await sha256(pwd);
   const user = {
     id: Date.now().toString(),
     name: name,
@@ -2257,6 +2287,12 @@ function generateInviteCode() {
   if (!auth.inviteCodes) auth.inviteCodes = [];
   auth.inviteCodes.push({ code, createdAt: Date.now(), used: false });
   saveAuthData(auth);
+  // Also save to Supabase invite_codes table
+  if (CloudSync.initialized && CloudSync.supabase) {
+    CloudSync.supabase.from('invite_codes').insert({ code: code, is_used: false }).then(({error}) => {
+      if (error) console.warn('Failed to save invite code to Supabase:', error);
+    });
+  }
   renderAdminSidebar();
 }
 
@@ -2282,7 +2318,6 @@ function approveApp(appId) {
 
   // Grant permission or upgrade
   if (app.type === 'upgrade') {
-    // Upgrade user to resident - generate a one-time invite
     const users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
     const user = users.find(u => u.id === app.userId);
     if (user) {
@@ -2290,8 +2325,13 @@ function approveApp(appId) {
       user.passwordHash = user.passwordHash || '';
       localStorage.setItem('nutripro_users', JSON.stringify(users));
       CloudSync.push('users', users);
-      // Also update global users array
       window.users = users;
+      // Also update Supabase users table
+      if (CloudSync.initialized && CloudSync.supabase) {
+        CloudSync.supabase.from('users').update({ role: 'resident' }).eq('id', app.userId).then(({error}) => {
+          if (error) console.warn('Failed to update user role in Supabase:', error);
+        });
+      }
     }
   } else if (app.type === 'perm' && app.target) {
     if (!auth.userGrants) auth.userGrants = {};
@@ -2299,8 +2339,24 @@ function approveApp(appId) {
     if (!auth.userGrants[app.userId].includes(app.target)) {
       auth.userGrants[app.userId].push(app.target);
     }
+    // Also update Supabase user_permissions table
+    if (CloudSync.initialized && CloudSync.supabase) {
+      CloudSync.supabase.from('user_permissions').insert({
+        user_id: app.userId, module: app.target, granted_by: 'admin'
+      }).then(({error}) => {
+        if (error) console.warn('Failed to save permission to Supabase:', error);
+      });
+    }
   }
   saveAuthData(auth);
+  // Also update Supabase applications table
+  if (CloudSync.initialized && CloudSync.supabase) {
+    CloudSync.supabase.from('applications').update({
+      status: 'approved', admin_reply: app.adminReply, processed_at: new Date().toISOString()
+    }).eq('id', appId).then(({error}) => {
+      if (error) console.warn('Failed to update application in Supabase:', error);
+    });
+  }
   renderAdminSidebar();
   applyPermissions();
 }
@@ -4112,21 +4168,21 @@ function init() {
 
 // ===== CLOUD SYNC INIT =====
 async function initCloudSync() {
-  // Wait for Firebase SDK to load (max 8 seconds)
+  // Wait for Supabase SDK to load (max 8 seconds)
   let waited = 0;
-  while (!window._firebaseReady && waited < 8000) {
+  while (!window._supabaseReady && !window._supabaseLoadFailed && waited < 8000) {
     await new Promise(r => setTimeout(r, 200));
     waited += 200;
   }
-  if (!window._firebaseReady) {
-    console.warn('CloudSync: Firebase SDK not loaded, cloud sync disabled');
-    if (window._firebaseLoadFailed) {
-      CloudSync.lastError = 'Firebase SDK 加载失败（可能被网络屏蔽）。如在国内使用，请尝试开启科学上网。';
+  if (!window._supabaseReady) {
+    console.warn('CloudSync: Supabase SDK not loaded, cloud sync disabled');
+    if (window._supabaseLoadFailed) {
+      CloudSync.lastError = 'Supabase SDK 加载失败。请检查网络连接。';
     } else {
-      CloudSync.lastError = 'Firebase SDK 加载超时';
+      CloudSync.lastError = 'Supabase SDK 加载超时';
     }
     const indicator = document.getElementById('syncIndicator');
-    if (indicator && DEFAULT_FIREBASE_CONFIG.apiKey) {
+    if (indicator && SUPABASE_CONFIG.url !== 'SUPABASE_URL_PLACEHOLDER') {
       indicator.style.display = 'inline-flex';
       indicator.textContent = '⚠️';
       indicator.title = CloudSync.lastError;
@@ -4137,27 +4193,21 @@ async function initCloudSync() {
   }
   const success = await CloudSync.init();
   if (success) {
-    // Pull latest data from cloud
     await CloudSync.pullAll();
-    // Refresh in-memory data from updated localStorage
     users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
     allDietData = JSON.parse(localStorage.getItem('nutripro_allDietData') || '{}');
-    // Refresh current user reference
     if (currentUser) {
       currentUser = users.find(u => u.id === currentUser.id) || currentUser;
       localStorage.setItem('nutripro_currentUser', JSON.stringify(currentUser));
     }
-    // Set up real-time listeners
     CloudSync.listen();
-    // Refresh UI
     renderUsers();
     renderUserForm();
     if (document.getElementById('userBtn') && currentUser) {
       document.getElementById('userBtn').innerHTML = `👤 ${currentUser.name}`;
     }
   } else {
-    // Show setup hint if default config exists but connection failed
-    if (DEFAULT_FIREBASE_CONFIG.apiKey) {
+    if (SUPABASE_CONFIG.url !== 'SUPABASE_URL_PLACEHOLDER') {
       const indicator = document.getElementById('syncIndicator');
       if (indicator) {
         indicator.style.display = 'inline-flex';
