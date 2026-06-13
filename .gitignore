@@ -1,0 +1,37 @@
+# Python scripts (dev tools)
+*.py
+check_syntax.js
+
+# Temp files
+temp_*.js
+test_init.html
+
+# Food data raw/processed (large files)
+food_data_raw/
+food_data_compact.json
+food_data_final.json
+food_data_processed.json
+
+# Archives
+archive/
+
+# Knowledge base (private data)
+知识库/
+
+# IDE/config
+.codebuddy/
+.workbuddy/
+
+# Skeleton
+营养数据平台_skeleton.html
+
+# Backup files
+index_v*.html
+*_backup.html
+
+# Screenshots and docs
+nutripro/*.png
+nutripro/*.txt
+
+# Sensitive data
+solutions-archive.json

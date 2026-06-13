@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NutriPro 运动营养数据平台 v1.5</title>
+<title>NutriPro 运动营养数据平台</title>
 <script>
 // Supabase SDK (replaces Firebase — accessible in China without VPN)
 // Correct UMD path: auto-resolve via CDN (no /dist/supabase.min.js — that path does NOT exist)
@@ -1042,11 +1042,6 @@ input, select, textarea { font-family:inherit; }
       <button class="auth-btn auth-btn-secondary" style="width:auto;padding:6px 16px;font-size:12px;" onclick="showSecurityQuestionModal()">🛡️ 设置安全问题</button>
       <div id="securityQuestionStatus" style="margin-top:8px;font-size:12px;color:var(--text-muted);"></div>
     </div>
-    <!-- User Management -->
-    <div class="admin-section">
-      <h3>👥 用户管理</h3>
-      <div id="adminUserMgmt"></div>
-    </div>
   </div>
 </aside>
 
@@ -1170,27 +1165,17 @@ input, select, textarea { font-family:inherit; }
     <div style="display:flex;gap:20px;">
       <div style="flex:1;">
         <div class="calc-card">
-          <h3>📋 <span data-i18n="today_diet">饮食记录</span>
-            <span style="float:right;font-size:12px;">
-              <button class="btn-action" style="padding:2px 8px;font-size:11px;${energyUnit==='kcal'?'background:var(--accent);color:#fff;':''}" onclick="setEnergyUnit('kcal')">kcal</button>
-              <button class="btn-action" style="padding:2px 8px;font-size:11px;${energyUnit==='kj'?'background:var(--accent);color:#fff;':''}" onclick="setEnergyUnit('kj')">kJ</button>
-            </span>
-          </h3>
+          <h3>📋 <span data-i18n="today_diet">饮食记录</span></h3>
           <div id="dietDateControls" style="margin-bottom:12px;"></div>
           <div id="dietFoodList"></div>
-          <div style="display:flex;gap:8px;margin-top:10px;">
-            <button class="btn-primary" onclick="addDietFood()" style="flex:1;" data-i18n="add_food">+ 添加食物</button>
-            <button class="btn-primary" onclick="showSupplementModal()" style="flex:1;background:var(--accent-light);">💊 添加补剂</button>
-            <button class="btn-primary" onclick="uploadDietPhoto()" style="flex:1;background:#8b5cf6;">📷 拍照</button>
-          </div>
+          <button class="btn-primary" onclick="addDietFood()" style="margin-top:10px;" data-i18n="add_food">+ 添加食物</button>
         </div>
         <div class="calc-card">
           <h3>🏃 <span data-i18n="training_log">训练记录</span></h3>
-          <div id="healthDateControls"></div>
           <div class="calc-row">
             <div class="calc-field">
               <label data-i18n="training_type">训练类型</label>
-              <select id="trainingType" onchange="saveHealthData()">
+              <select id="trainingType">
                 <option value="strength">力量训练</option>
                 <option value="cardio">有氧训练</option>
                 <option value="hiit">HIIT</option>
@@ -1200,11 +1185,11 @@ input, select, textarea { font-family:inherit; }
             </div>
             <div class="calc-field">
               <label data-i18n="duration">时长(分钟)</label>
-              <input type="number" id="trainingDuration" placeholder="60" onchange="saveHealthData()">
+              <input type="number" id="trainingDuration" placeholder="60">
             </div>
             <div class="calc-field">
               <label data-i18n="intensity">强度</label>
-              <select id="trainingIntensity" onchange="saveHealthData()">
+              <select id="trainingIntensity">
                 <option value="low">低</option>
                 <option value="moderate">中</option>
                 <option value="high">高</option>
@@ -1217,21 +1202,11 @@ input, select, textarea { font-family:inherit; }
           <div class="calc-row">
             <div class="calc-field">
               <label data-i18n="sleep_hours">睡眠时长(小时)</label>
-              <input type="number" id="sleepHours" placeholder="7.5" step="0.5" onchange="saveHealthData()">
+              <input type="number" id="sleepHours" placeholder="7.5" step="0.5">
             </div>
-            <div class="calc-field">
-              <label>睡眠分数</label>
-              <input type="number" id="sleepScore" placeholder="85" min="0" max="100" onchange="saveHealthData()">
-            </div>
-            <div class="calc-field">
-              <label>HRV(ms)</label>
-              <input type="number" id="sleepHRV" placeholder="45" onchange="saveHealthData()">
-            </div>
-          </div>
-          <div class="calc-row" style="margin-top:8px;">
             <div class="calc-field">
               <label data-i18n="water_intake">饮水量(ml)</label>
-              <input type="number" id="waterIntake" placeholder="2000" onchange="saveHealthData()">
+              <input type="number" id="waterIntake" placeholder="2000">
             </div>
           </div>
         </div>
@@ -1371,20 +1346,10 @@ input, select, textarea { font-family:inherit; }
         <input type="hidden" id="dietFoodSelect">
       </div>
       <div class="calc-field" style="margin-bottom:12px;">
-        <label data-i18n="amount_g">摄入量</label>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <input type="number" id="dietFoodAmount" value="100" min="1" style="flex:1;">
-          <select id="dietFoodUnit" onchange="onUnitChange()" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-size:14px;">
-            <option value="g">克(g)</option>
-          </select>
-        </div>
-      </div>
-      <div class="calc-field" style="margin-bottom:12px;">
-        <label>添加到餐次</label>
-        <select id="dietMealSelect" style="width:100%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-size:14px;"></select>
+        <label data-i18n="amount_g">摄入量(克)</label>
+        <input type="number" id="dietFoodAmount" value="100" min="1">
       </div>
       <button class="btn-primary" onclick="confirmAddDietFood()" data-i18n="confirm">确认添加</button>
-      <button class="btn-primary" onclick="closeAddDietModal();analyzeFoodPhoto()" style="background:#8b5cf6;margin-top:6px;">📷 拍照识别</button>
     </div>
   </div>
 </div>
@@ -1458,8 +1423,6 @@ const CloudSync = {
   // Push data to Supabase sync_data table
   async push(key, data) {
     if (!this.initialized || !this.supabase) return;
-    this._lastPushTime = this._lastPushTime || {};
-    this._lastPushTime[key] = Date.now();
     try {
       const { error } = await this.supabase
         .from('sync_data')
@@ -1507,9 +1470,6 @@ const CloudSync = {
             case 'diet':
               localStorage.setItem('nutripro_allDietData', JSON.stringify(cloudData));
               break;
-            case 'health':
-              localStorage.setItem('nutripro_healthData', JSON.stringify(cloudData));
-              break;
           }
         }
       }
@@ -1539,11 +1499,6 @@ const CloudSync = {
           if (self.syncing) return;
           const key = payload.new?.key;
           if (!key) return;
-          // Skip if we just pushed this key within 2 seconds (avoid self-overwrite)
-          if (self._lastPushTime && self._lastPushTime[key] && (Date.now() - self._lastPushTime[key]) < 2000) {
-            console.log('CloudSync: Skipping self-push for', key);
-            return;
-          }
           const cloudData = payload.new?.data;
           console.log('CloudSync: Received update for', key);
           switch(key) {
@@ -1587,11 +1542,6 @@ const CloudSync = {
               localStorage.setItem('nutripro_allDietData', JSON.stringify(cloudData));
               allDietData = cloudData;
               renderDietFoods();
-              break;
-            case 'health':
-              localStorage.setItem('nutripro_healthData', JSON.stringify(cloudData));
-              allHealthData = cloudData;
-              loadHealthData();
               break;
           }
         }
@@ -2180,7 +2130,6 @@ async function loginAsResident() {
   const users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
   const user = users.find(u => u.name === name && u.role === 'resident');
   if (!user) { errEl.textContent = '用户名不存在或非常驻用户'; return; }
-  if (user.status === 'deactivated') { errEl.textContent = '该用户已被注销，请联系管理员'; return; }
   if (hash !== user.passwordHash) { errEl.textContent = '密码错误'; return; }
   const auth = getAuthData();
   const days = auth.sessionDays !== undefined ? auth.sessionDays : 30;
@@ -2543,57 +2492,6 @@ function renderAdminSidebar() {
       }).join('');
     }
   }
-
-  // User Management Section
-  const userMgmtEl = document.getElementById('adminUserMgmt');
-  if (userMgmtEl) {
-    const allUsers = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
-    userMgmtEl.innerHTML = `
-      <div style="margin-bottom:8px;">
-        <input id="adminUserSearch" placeholder="搜索用户名..." oninput="filterAdminUsers()" style="width:100%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:13px;">
-      </div>
-      <div id="adminUserListContainer">${renderAdminUserList(allUsers)}</div>
-    `;
-  }
-}
-
-function renderAdminUserList(userList) {
-  if (!userList || userList.length === 0) return '<div style="color:var(--text-muted);font-size:13px;">无匹配用户</div>';
-  return `<table style="width:100%;font-size:12px;border-collapse:collapse;">
-    <thead><tr style="border-bottom:2px solid var(--accent);"><th style="text-align:left;padding:4px;">用户名</th><th style="padding:4px;">角色</th><th style="padding:4px;">性别</th><th style="padding:4px;">注册时间</th><th style="padding:4px;">操作</th></tr></thead>
-    <tbody>${userList.map(u => `<tr style="border-bottom:1px solid var(--border);">
-      <td style="padding:4px;">${u.name}</td>
-      <td style="padding:4px;text-align:center;">${u.role==='admin'?'管理':u.role==='resident'?'常驻':'普通'}</td>
-      <td style="padding:4px;text-align:center;">${u.gender==='male'?'男':'女'}</td>
-      <td style="padding:4px;text-align:center;font-size:11px;">${u.createdAt?new Date(u.createdAt).toLocaleDateString():'-'}</td>
-      <td style="padding:4px;text-align:center;">${u.role!=='admin'?`<button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="deactivateUser('${u.id}','${u.name}')">注销</button>`:''}</td>
-    </tr>`).join('')}</tbody></table>`;
-}
-
-function filterAdminUsers() {
-  const query = (document.getElementById('adminUserSearch')?.value || '').toLowerCase();
-  const allUsers = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
-  const filtered = allUsers.filter(u => u.name.toLowerCase().includes(query) || u.role.includes(query));
-  const container = document.getElementById('adminUserListContainer');
-  if (container) container.innerHTML = renderAdminUserList(filtered);
-}
-
-function deactivateUser(userId, userName) {
-  if (!confirm('确定要注销用户 "' + userName + '" 吗？此操作不可撤销！')) return;
-  if (!confirm('二次确认：注销后该用户将无法登录，确定继续？')) return;
-  const allUsers = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
-  const idx = allUsers.findIndex(u => u.id === userId);
-  if (idx === -1) return;
-  allUsers[idx].status = 'deactivated';
-  localStorage.setItem('nutripro_users', JSON.stringify(allUsers));
-  window.users = allUsers;
-  CloudSync.push('users', allUsers);
-  // Log
-  const logs = JSON.parse(localStorage.getItem('nutripro_adminLogs') || '[]');
-  logs.push({action:'deactivate_user', targetUser: userName, targetId: userId, operator: currentSession?.userName || 'admin', timestamp: Date.now()});
-  localStorage.setItem('nutripro_adminLogs', JSON.stringify(logs));
-  renderAdminSidebar();
-  showSyncNotification('✅ 用户 "' + userName + '" 已注销');
 }
 
 function generateInviteCode() {
@@ -3179,520 +3077,6 @@ let allDietData = JSON.parse(localStorage.getItem('nutripro_allDietData') || '{}
 let selectedDietDate = new Date().toISOString().split('T')[0]; // default today
 let dietDateRange = { start: null, end: null }; // for multi-day view
 let dietViewMode = 'single'; // 'single' or 'range'
-let energyUnit = localStorage.getItem('nutripro_energyUnit') || 'kcal'; // 'kcal' or 'kj'
-
-function setEnergyUnit(unit) {
-  energyUnit = unit;
-  localStorage.setItem('nutripro_energyUnit', unit);
-  renderDietFoods();
-}
-
-function convertEnergy(kcal) {
-  if (energyUnit === 'kj') return Math.round(kcal * 4.184);
-  return Math.round(kcal);
-}
-
-function energyLabel() {
-  return energyUnit === 'kj' ? 'kJ' : 'kcal';
-}
-
-// Food unit conversion database
-const FOOD_UNITS = {
-  'egg': [{unit:'个', grams:50}, {unit:'克', grams:1}],
-  'milk': [{unit:'ml', grams:1.03}, {unit:'克', grams:1}],
-  'bread': [{unit:'片', grams:30}, {unit:'克', grams:1}],
-  'rice': [{unit:'碗', grams:150}, {unit:'克', grams:1}],
-  'apple': [{unit:'个', grams:200}, {unit:'克', grams:1}],
-  'banana': [{unit:'根', grams:120}, {unit:'克', grams:1}],
-  'chicken_breast': [{unit:'块', grams:120}, {unit:'克', grams:1}],
-  'tofu': [{unit:'块', grams:150}, {unit:'克', grams:1}],
-  'yogurt': [{unit:'杯', grams:200}, {unit:'克', grams:1}],
-  'sweet_potato': [{unit:'个', grams:200}, {unit:'克', grams:1}],
-  'oatmeal': [{unit:'勺', grams:15}, {unit:'克', grams:1}],
-  'peanut_butter': [{unit:'勺', grams:16}, {unit:'克', grams:1}],
-  'protein_powder': [{unit:'勺', grams:30}, {unit:'克', grams:1}],
-};
-
-function updateFoodUnits() {
-  const foodId = document.getElementById('dietFoodSelect')?.value;
-  const unitSelect = document.getElementById('dietFoodUnit');
-  if (!unitSelect || !foodId) return;
-  const units = FOOD_UNITS[foodId] || [{unit:'克', grams:1}];
-  unitSelect.innerHTML = units.map(u => `<option value="${u.grams}" data-label="${u.unit}">${u.unit}${u.grams!==1?' ('+u.grams+'g)':''}</option>`).join('');
-}
-
-function onUnitChange() {
-  const unitSelect = document.getElementById('dietFoodUnit');
-  const amountInput = document.getElementById('dietFoodAmount');
-  if (!unitSelect || !amountInput) return;
-  const gramsPerUnit = parseFloat(unitSelect.value) || 1;
-  const currentAmount = parseFloat(amountInput.value) || 0;
-  // If switching from a non-gram unit, convert display
-  if (gramsPerUnit !== 1 && currentAmount === 100) {
-    amountInput.value = 1; // default 1 unit
-  }
-}
-
-// Supplement database
-const SUPPLEMENT_DB = [
-  {id:'supp_whey', name:'乳清蛋白粉', category:'蛋白质', servingSize:30, unit:'g', protein:24, fat:1.5, CHO:3, energyKCal:120, Ca:100, Fe:0.5, Zn:0.5, K:150, Na:80},
-  {id:'supp_creatine', name:'肌酸一水合物', category:'运动表现', servingSize:5, unit:'g', protein:0, fat:0, CHO:0, energyKCal:0},
-  {id:'supp_fish_oil', name:'鱼油(Omega-3)', category:'脂肪酸', servingSize:1, unit:'粒', protein:0, fat:1, CHO:0, energyKCal:9},
-  {id:'supp_vitd3', name:'维生素D3', category:'维生素', servingSize:1, unit:'粒', protein:0, fat:0, CHO:0, energyKCal:0, vitaminA:0},
-  {id:'supp_magnesium', name:'镁(柠檬酸镁)', category:'矿物质', servingSize:1, unit:'粒', protein:0, fat:0, CHO:0, energyKCal:0, Mg:200},
-  {id:'supp_zinc', name:'锌(葡萄糖酸锌)', category:'矿物质', servingSize:1, unit:'粒', protein:0, fat:0, CHO:0, energyKCal:0, Zn:15},
-  {id:'supp_bcaa', name:'BCAA', category:'氨基酸', servingSize:7, unit:'g', protein:7, fat:0, CHO:0, energyKCal:28},
-  {id:'supp_multivit', name:'复合维生素', category:'维生素', servingSize:1, unit:'粒', protein:0, fat:0, CHO:0, energyKCal:0},
-  {id:'supp_caffeine', name:'咖啡因', category:'运动表现', servingSize:1, unit:'粒', protein:0, fat:0, CHO:0, energyKCal:0},
-  {id:'supp_probiotics', name:'益生菌', category:'消化', servingSize:1, unit:'粒', protein:0, fat:0, CHO:0, energyKCal:0},
-  {id:'supp_collagen', name:'胶原蛋白肽', category:'蛋白质', servingSize:10, unit:'g', protein:9, fat:0, CHO:0, energyKCal:36},
-  {id:'supp_iron', name:'铁(富马酸亚铁)', category:'矿物质', servingSize:1, unit:'粒', protein:0, fat:0, CHO:0, energyKCal:0, Fe:18},
-  {id:'supp_calcium', name:'钙(碳酸钙)', category:'矿物质', servingSize:1, unit:'粒', protein:0, fat:0, CHO:0, energyKCal:0, Ca:500},
-  {id:'supp_vitc', name:'维生素C', category:'维生素', servingSize:1, unit:'粒', protein:0, fat:0, CHO:0, energyKCal:0, vitaminC:500},
-  {id:'supp_vitbcomplex', name:'维生素B族', category:'维生素', servingSize:1, unit:'粒', protein:0, fat:0, CHO:0, energyKCal:0},
-];
-
-function showSupplementModal() {
-  if (!currentUser) { alert(currentLang==='zh'?'请先选择用户档案':'Please select a user profile first'); return; }
-  const modal = document.createElement('div');
-  modal.id = 'supplementModal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;';
-  const categories = [...new Set(SUPPLEMENT_DB.map(s => s.category))];
-  modal.innerHTML = `<div style="background:var(--card-bg);border-radius:16px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h3 style="color:var(--accent-light);margin:0;">💊 添加补剂</h3>
-      <button onclick="document.getElementById('supplementModal').remove()" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;">✕</button>
-    </div>
-    <div style="margin-bottom:12px;">
-      <select id="suppCategoryFilter" onchange="filterSupplements()" style="width:100%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;">
-        <option value="">全部分类</option>
-        ${categories.map(c => `<option value="${c}">${c}</option>`).join('')}
-      </select>
-    </div>
-    <div id="suppList">${renderSuppList(SUPPLEMENT_DB)}</div>
-    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
-      <h4 style="color:var(--text-muted);font-size:13px;">自定义补剂</h4>
-      <div style="display:flex;gap:8px;margin-top:8px;">
-        <input id="customSuppName" placeholder="补剂名称" style="flex:1;background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:13px;">
-        <input id="customSuppAmount" type="number" placeholder="剂量" value="1" style="width:60px;background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:6px;font-size:13px;">
-        <button class="btn-primary" style="padding:6px 12px;font-size:12px;" onclick="addCustomSupplement()">添加</button>
-      </div>
-    </div>
-  </div>`;
-  document.body.appendChild(modal);
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-}
-
-function renderSuppList(supps) {
-  return supps.map(s => `<div style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border);">
-    <div style="flex:1;">
-      <div style="font-size:13px;font-weight:600;">${s.name}</div>
-      <div style="font-size:11px;color:var(--text-muted);">${s.category} | 每份: ${s.servingSize}${s.unit}${s.energyKCal?' | '+s.energyKCal+'kcal':''}</div>
-    </div>
-    <input type="number" id="suppServ_${s.id}" value="1" min="1" style="width:50px;background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-size:12px;text-align:center;">
-    <button class="btn-primary" style="padding:4px 10px;font-size:11px;" onclick="addSupplementToDiet('${s.id}')">+</button>
-  </div>`).join('');
-}
-
-function filterSupplements() {
-  const cat = document.getElementById('suppCategoryFilter')?.value;
-  const filtered = cat ? SUPPLEMENT_DB.filter(s => s.category === cat) : SUPPLEMENT_DB;
-  document.getElementById('suppList').innerHTML = renderSuppList(filtered);
-}
-
-function addSupplementToDiet(suppId) {
-  if (!currentUser) return;
-  const supp = SUPPLEMENT_DB.find(s => s.id === suppId);
-  if (!supp) return;
-  const servings = parseInt(document.getElementById('suppServ_' + suppId)?.value) || 1;
-  // Add supplement as a food item with calculated nutrition
-  const item = {
-    foodId: supp.id,
-    amount: supp.servingSize * servings,
-    isSupplement: true,
-    suppName: supp.name,
-    suppServings: servings
-  };
-  if (!allDietData[currentUser.id]) allDietData[currentUser.id] = {};
-  if (!allDietData[currentUser.id][selectedDietDate]) allDietData[currentUser.id][selectedDietDate] = [{mealIndex:0, mealName:'第一餐', items:[]}];
-  const meals = allDietData[currentUser.id][selectedDietDate];
-  if (Array.isArray(meals) && meals.length > 0 && meals[0].items) {
-    meals[0].items.push(item);
-  }
-  saveDietData();
-  renderDietFoods();
-  document.getElementById('supplementModal')?.remove();
-  showSyncNotification('✅ 补剂 "' + supp.name + '" 已添加');
-}
-
-function addCustomSupplement() {
-  if (!currentUser) return;
-  const name = document.getElementById('customSuppName')?.value?.trim();
-  const amount = parseInt(document.getElementById('customSuppAmount')?.value) || 1;
-  if (!name) { alert('请输入补剂名称'); return; }
-  const item = {
-    foodId: 'custom_supp_' + Date.now(),
-    amount: amount,
-    isSupplement: true,
-    suppName: name,
-    suppServings: 1
-  };
-  if (!allDietData[currentUser.id]) allDietData[currentUser.id] = {};
-  if (!allDietData[currentUser.id][selectedDietDate]) allDietData[currentUser.id][selectedDietDate] = [{mealIndex:0, mealName:'第一餐', items:[]}];
-  const meals = allDietData[currentUser.id][selectedDietDate];
-  if (Array.isArray(meals) && meals.length > 0 && meals[0].items) {
-    meals[0].items.push(item);
-  }
-  saveDietData();
-  renderDietFoods();
-  document.getElementById('supplementModal')?.remove();
-  showSyncNotification('✅ 自定义补剂 "' + name + '" 已添加');
-}
-
-// ===== PHOTO UPLOAD & AI ANALYSIS =====
-let dietPhotos = JSON.parse(localStorage.getItem('nutripro_dietPhotos') || '{}');
-
-function saveDietPhotos() {
-  try { localStorage.setItem('nutripro_dietPhotos', JSON.stringify(dietPhotos)); } catch(e) {
-    console.warn('Photo storage full, trimming old photos');
-    // Remove oldest photos to free space
-    const keys = Object.keys(dietPhotos);
-    if (keys.length > 5) {
-      keys.slice(0, keys.length - 5).forEach(k => delete dietPhotos[k]);
-      localStorage.setItem('nutripro_dietPhotos', JSON.stringify(dietPhotos));
-    }
-  }
-}
-
-function uploadDietPhoto() {
-  if (!currentUser) { alert(currentLang==='zh'?'请先选择用户档案':'Please select a user profile first'); return; }
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.capture = 'environment'; // Prefer camera on mobile
-  input.onchange = function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    // Compress and store
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      const img = new Image();
-      img.onload = function() {
-        // Resize to max 800px
-        const canvas = document.createElement('canvas');
-        const maxDim = 800;
-        let w = img.width, h = img.height;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-          else { w = Math.round(w * maxDim / h); h = maxDim; }
-        }
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-        // Store photo
-        const photoKey = currentUser.id + '_' + selectedDietDate;
-        if (!dietPhotos[photoKey]) dietPhotos[photoKey] = [];
-        dietPhotos[photoKey].push({data: dataUrl, timestamp: Date.now()});
-        saveDietPhotos();
-        renderDietFoods();
-        showSyncNotification('✅ 照片已上传');
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  };
-  input.click();
-}
-
-function renderDietPhotos(dateStr) {
-  if (!currentUser) return '';
-  const photoKey = currentUser.id + '_' + dateStr;
-  const photos = dietPhotos[photoKey];
-  if (!photos || photos.length === 0) return '';
-  return `<div style="margin-bottom:12px;">
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">📷 饮食照片 (${photos.length})</div>
-    <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;">
-      ${photos.map((p, i) => `<div style="position:relative;flex-shrink:0;">
-        <img src="${p.data}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer;" onclick="showPhotoPreview('${photoKey}',${i})">
-        <button onclick="deleteDietPhoto('${photoKey}',${i})" style="position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
-      </div>`).join('')}
-    </div>
-  </div>`;
-}
-
-function showPhotoPreview(photoKey, idx) {
-  const photos = dietPhotos[photoKey];
-  if (!photos || !photos[idx]) return;
-  const modal = document.createElement('div');
-  modal.id = 'photoPreviewModal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;';
-  modal.innerHTML = `<div style="position:relative;max-width:90vw;max-height:90vh;">
-    <img src="${photos[idx].data}" style="max-width:90vw;max-height:85vh;border-radius:8px;">
-    <button onclick="document.getElementById('photoPreviewModal').remove()" style="position:absolute;top:-12px;right:-12px;background:var(--card-bg);border:none;color:var(--text);width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;">✕</button>
-  </div>`;
-  document.body.appendChild(modal);
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-}
-
-function deleteDietPhoto(photoKey, idx) {
-  if (!dietPhotos[photoKey]) return;
-  dietPhotos[photoKey].splice(idx, 1);
-  if (dietPhotos[photoKey].length === 0) delete dietPhotos[photoKey];
-  saveDietPhotos();
-  renderDietFoods();
-}
-
-// #12: AI food recognition from photo (requires external API)
-async function analyzeFoodPhoto() {
-  if (!currentUser) { alert(currentLang==='zh'?'请先选择用户档案':'Please select a user profile first'); return; }
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.capture = 'environment';
-  input.onchange = async function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    showSyncNotification('🔍 正在分析食物图片...');
-    // Read image as base64
-    const reader = new FileReader();
-    reader.onload = async function(ev) {
-      const base64 = ev.target.result.split(',')[1];
-      // Try to use Supabase Edge Function for AI analysis
-      if (CloudSync.initialized && CloudSync.supabase) {
-        try {
-          const { data, error } = await CloudSync.supabase.functions.invoke('analyze-food', {
-            body: { image: base64 }
-          });
-          if (error) throw error;
-          if (data && data.foods) {
-            showAnalysisResults(data.foods);
-            return;
-          }
-        } catch(e) {
-          console.warn('AI analysis failed:', e);
-        }
-      }
-      // Fallback: manual entry with photo preview
-      showSyncNotification('⚠️ AI分析暂不可用，请手动输入食物信息');
-      // Open add food modal with photo
-      addDietFood();
-    };
-    reader.readAsDataURL(file);
-  };
-  input.click();
-}
-
-function showAnalysisResults(foods) {
-  const modal = document.createElement('div');
-  modal.id = 'analysisModal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;';
-  modal.innerHTML = `<div style="background:var(--card-bg);border-radius:16px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h3 style="color:var(--accent-light);margin:0;">🔍 识别结果</h3>
-      <button onclick="document.getElementById('analysisModal').remove()" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;">✕</button>
-    </div>
-    <p style="color:var(--text-muted);font-size:13px;">AI识别到以下食物，请确认后添加：</p>
-    ${foods.map((food, i) => `<div style="padding:8px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
-      <div style="font-weight:600;">${food.name || '未知食物'}</div>
-      <div style="font-size:12px;color:var(--text-muted);">估算: ${food.amount || 100}g | ${food.calories || 0}kcal</div>
-      <button class="btn-primary" style="margin-top:4px;padding:4px 12px;font-size:11px;" onclick="addAnalyzedFood(${i})">添加到记录</button>
-    </div>`).join('')}
-  </div>`;
-  modal._foods = foods;
-  document.body.appendChild(modal);
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-}
-
-function addAnalyzedFood(idx) {
-  const modal = document.getElementById('analysisModal');
-  if (!modal || !modal._foods || !modal._foods[idx]) return;
-  const food = modal._foods[idx];
-  // Search FOOD_DB for matching food
-  const match = FOOD_DB.find(f => f.name.includes(food.name) || food.name.includes(f.name));
-  if (match) {
-    const item = {foodId: match.id, amount: food.amount || 100};
-    if (!allDietData[currentUser.id]) allDietData[currentUser.id] = {};
-    if (!allDietData[currentUser.id][selectedDietDate]) allDietData[currentUser.id][selectedDietDate] = [{mealIndex:0, mealName:'第一餐', items:[]}];
-    const meals = allDietData[currentUser.id][selectedDietDate];
-    if (Array.isArray(meals) && meals.length > 0 && meals[0].items) {
-      meals[0].items.push(item);
-    }
-    saveDietData();
-    renderDietFoods();
-    showSyncNotification('✅ "' + match.name + '" 已添加');
-  } else {
-    showSyncNotification('⚠️ 未找到匹配食物 "' + food.name + '"，请手动添加');
-    addDietFood();
-  }
-}
-
-// ===== HEALTH DATA (training, sleep, water) =====
-let allHealthData = JSON.parse(localStorage.getItem('nutripro_healthData') || '{}');
-let selectedHealthDate = new Date().toISOString().split('T')[0];
-
-function getHealthDataForDate(userId, dateStr) {
-  if (!allHealthData[userId]) allHealthData[userId] = {};
-  return allHealthData[userId][dateStr] || { training: {type:'',duration:'',intensity:''}, sleep: {hours:'',score:'',hrv:''}, water: {amount:''} };
-}
-function saveHealthData() {
-  if (!currentUser) return;
-  if (!allHealthData[currentUser.id]) allHealthData[currentUser.id] = {};
-  const dateStr = selectedHealthDate;
-  allHealthData[currentUser.id][dateStr] = {
-    training: {
-      type: document.getElementById('trainingType')?.value || '',
-      duration: document.getElementById('trainingDuration')?.value || '',
-      intensity: document.getElementById('trainingIntensity')?.value || ''
-    },
-    sleep: {
-      hours: document.getElementById('sleepHours')?.value || '',
-      score: document.getElementById('sleepScore')?.value || '',
-      hrv: document.getElementById('sleepHRV')?.value || ''
-    },
-    water: {
-      amount: document.getElementById('waterIntake')?.value || ''
-    }
-  };
-  localStorage.setItem('nutripro_healthData', JSON.stringify(allHealthData));
-  CloudSync.push('health', allHealthData);
-}
-function loadHealthData() {
-  if (!currentUser) return;
-  const data = getHealthDataForDate(currentUser.id, selectedHealthDate);
-  const tt = document.getElementById('trainingType'); if(tt) tt.value = data.training.type || '';
-  const td = document.getElementById('trainingDuration'); if(td) td.value = data.training.duration || '';
-  const ti = document.getElementById('trainingIntensity'); if(ti) ti.value = data.training.intensity || '';
-  const sh = document.getElementById('sleepHours'); if(sh) sh.value = data.sleep.hours || '';
-  const ss = document.getElementById('sleepScore'); if(ss) ss.value = data.sleep.score || '';
-  const sr = document.getElementById('sleepHRV'); if(sr) sr.value = data.sleep.hrv || '';
-  const wi = document.getElementById('waterIntake'); if(wi) wi.value = data.water.amount || '';
-}
-function changeHealthDate(date) {
-  saveHealthData(); // save current before switching
-  selectedHealthDate = date;
-  loadHealthData();
-}
-function getAvailableHealthDates() {
-  if (!currentUser || !allHealthData[currentUser.id]) return [];
-  return Object.keys(allHealthData[currentUser.id]).sort().reverse();
-}
-function renderHealthDateControls() {
-  const el = document.getElementById('healthDateControls');
-  if (!el) return;
-  const dates = getAvailableHealthDates();
-  el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-    <input type="date" id="healthDatePicker" value="${selectedHealthDate}" onchange="changeHealthDate(this.value)" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:13px;">
-    <button class="btn-action" style="font-size:11px;padding:2px 8px;" onclick="showHealthTrendModal()">📊 趋势图</button>
-  </div>`;
-}
-function showHealthTrendModal() {
-  const existing = document.getElementById('healthTrendModal');
-  if (existing) existing.remove();
-  const modal = document.createElement('div');
-  modal.id = 'healthTrendModal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;';
-  modal.innerHTML = `<div style="background:var(--card-bg);border-radius:16px;padding:24px;max-width:600px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.4);max-height:80vh;overflow-y:auto;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h3 style="color:var(--accent-light);">📊 健康数据趋势</h3>
-      <button onclick="document.getElementById('healthTrendModal').remove()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;">✕</button>
-    </div>
-    <div style="margin-bottom:12px;display:flex;gap:8px;">
-      <select id="healthTrendMetric" onchange="renderHealthTrend()" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;">
-        <option value="sleep">睡眠时长</option><option value="score">睡眠分数</option><option value="hrv">HRV</option><option value="water">饮水量</option><option value="duration">训练时长</option>
-      </select>
-      <select id="healthTrendRange" onchange="renderHealthTrend()" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;">
-        <option value="7">近7天</option><option value="30" selected>近30天</option><option value="90">近90天</option>
-      </select>
-    </div>
-    <canvas id="healthTrendCanvas" width="540" height="280" style="width:100%;border-radius:8px;background:var(--input-bg);"></canvas>
-  </div>`;
-  document.body.appendChild(modal);
-  renderHealthTrend();
-}
-function renderHealthTrend() {
-  if (!currentUser) return;
-  const metric = document.getElementById('healthTrendMetric')?.value || 'sleep';
-  const rangeDays = parseInt(document.getElementById('healthTrendRange')?.value || '30');
-  const canvas = document.getElementById('healthTrendCanvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
-
-  // Collect data points
-  const points = [];
-  const today = new Date();
-  for (let i = rangeDays - 1; i >= 0; i--) {
-    const d = new Date(today); d.setDate(d.getDate() - i);
-    const ds = d.toISOString().split('T')[0];
-    const data = getHealthDataForDate(currentUser.id, ds);
-    let val = null;
-    switch(metric) {
-      case 'sleep': val = parseFloat(data.sleep.hours) || null; break;
-      case 'score': val = parseFloat(data.sleep.score) || null; break;
-      case 'hrv': val = parseFloat(data.sleep.hrv) || null; break;
-      case 'water': val = parseFloat(data.water.amount) || null; break;
-      case 'duration': val = parseFloat(data.training.duration) || null; break;
-    }
-    if (val !== null) points.push({date: ds, value: val});
-  }
-  if (points.length < 2) {
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-muted') || '#888';
-    ctx.font = '14px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('数据不足，至少需要2个数据点', W/2, H/2);
-    return;
-  }
-
-  const pad = {top:20, right:20, bottom:40, left:50};
-  const gW = W - pad.left - pad.right, gH = H - pad.top - pad.bottom;
-  const minV = Math.min(...points.map(p=>p.value)) * 0.9;
-  const maxV = Math.max(...points.map(p=>p.value)) * 1.1;
-  const rangeV = maxV - minV || 1;
-
-  // Grid lines
-  ctx.strokeStyle = 'rgba(128,128,128,0.2)';
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= 4; i++) {
-    const y = pad.top + gH * i / 4;
-    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + gW, y); ctx.stroke();
-    const val = maxV - (maxV - minV) * i / 4;
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-muted') || '#888';
-    ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText(val.toFixed(1), pad.left - 6, y + 4);
-  }
-
-  // Line
-  const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#4f46e5';
-  ctx.strokeStyle = accentColor;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  points.forEach((p, i) => {
-    const x = pad.left + (i / (points.length - 1)) * gW;
-    const y = pad.top + gH - ((p.value - minV) / rangeV) * gH;
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-
-  // Dots
-  ctx.fillStyle = accentColor;
-  points.forEach((p, i) => {
-    const x = pad.left + (i / (points.length - 1)) * gW;
-    const y = pad.top + gH - ((p.value - minV) / rangeV) * gH;
-    ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
-  });
-
-  // X labels
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-muted') || '#888';
-  ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
-  const step = Math.max(1, Math.floor(points.length / 6));
-  points.forEach((p, i) => {
-    if (i % step === 0 || i === points.length - 1) {
-      const x = pad.left + (i / (points.length - 1)) * gW;
-      ctx.fillText(p.date.slice(5), x, H - 8);
-    }
-  });
-}
 
 function getDietKey(userId, dateStr) {
   return userId + '_' + dateStr;
@@ -3700,59 +3084,7 @@ function getDietKey(userId, dateStr) {
 function getCurrentUserDiet(dateStr) {
   if (!currentUser) return [];
   if (!allDietData[currentUser.id]) allDietData[currentUser.id] = {};
-  const dayData = allDietData[currentUser.id][dateStr];
-  if (!dayData) return [];
-  // Support both old flat array and new meal-based structure
-  if (Array.isArray(dayData)) {
-    // Old format: [{foodId, amount}] → migrate to new format
-    const migrated = dayData.length > 0 ? [{mealIndex:0, mealName:'第一餐', items: dayData}] : [];
-    allDietData[currentUser.id][dateStr] = migrated;
-    saveDietData();
-    return migrated;
-  }
-  return dayData; // Already meal-based: [{mealIndex, mealName, items: [{foodId, amount}]}]
-}
-function getCurrentUserDietFlat(dateStr) {
-  // Returns flat array of all food items across all meals for a date
-  const meals = getCurrentUserDiet(dateStr);
-  if (!Array.isArray(meals)) return [];
-  return meals.reduce((acc, meal) => acc.concat(meal.items || []), []);
-}
-function addMeal() {
-  if (!currentUser) return;
-  if (!allDietData[currentUser.id]) allDietData[currentUser.id] = {};
-  if (!allDietData[currentUser.id][selectedDietDate]) allDietData[currentUser.id][selectedDietDate] = [];
-  const meals = allDietData[currentUser.id][selectedDietDate];
-  if (Array.isArray(meals)) {
-    const idx = meals.length;
-    meals.push({mealIndex: idx, mealName: '第' + (idx + 1) + '餐', items: []});
-    saveDietData();
-    renderDietFoods();
-  }
-}
-function removeMeal(mealIdx) {
-  if (!currentUser) return;
-  const meals = allDietData[currentUser.id]?.[selectedDietDate];
-  if (!Array.isArray(meals) || !meals[mealIdx]) return;
-  if (meals.length <= 1) { alert('至少保留一个餐次'); return; }
-  if (!confirm('确定删除"' + meals[mealIdx].mealName + '"及其所有食物？')) return;
-  meals.splice(mealIdx, 1);
-  // Re-index
-  meals.forEach((m, i) => { m.mealIndex = i; });
-  if (meals.length === 0) delete allDietData[currentUser.id][selectedDietDate];
-  saveDietData();
-  renderDietFoods();
-}
-function renameMeal(mealIdx) {
-  if (!currentUser) return;
-  const meals = allDietData[currentUser.id]?.[selectedDietDate];
-  if (!Array.isArray(meals) || !meals[mealIdx]) return;
-  const newName = prompt('输入新餐次名称：', meals[mealIdx].mealName);
-  if (newName && newName.trim()) {
-    meals[mealIdx].mealName = newName.trim();
-    saveDietData();
-    renderDietFoods();
-  }
+  return allDietData[currentUser.id][dateStr] || [];
 }
 function saveDietData() {
   localStorage.setItem('nutripro_allDietData', JSON.stringify(allDietData));
@@ -3761,14 +3093,15 @@ function saveDietData() {
 function getDietFoodsForSelectedDates() {
   if (!currentUser) return [];
   if (dietViewMode === 'single') {
-    return getCurrentUserDietFlat(selectedDietDate);
+    return getCurrentUserDiet(selectedDietDate);
   } else {
+    // merge all days in range
     let merged = [];
     let d = new Date(dietDateRange.start);
     let end = new Date(dietDateRange.end);
     while (d <= end) {
       let ds = d.toISOString().split('T')[0];
-      merged = merged.concat(getCurrentUserDietFlat(ds));
+      merged = merged.concat(getCurrentUserDiet(ds));
       d.setDate(d.getDate() + 1);
     }
     return merged;
@@ -3865,11 +3198,11 @@ function renderUserForm() {
       <h4 style="color:var(--accent-light);margin-bottom:12px;">🔐 修改登录凭据</h4>
       <div class="calc-row">
         <div class="calc-field"><label>新用户名</label><input id="newUsername" value="${u.name}" placeholder="输入新用户名"></div>
-        <div class="calc-field"><label>当前密码</label><div class="auth-pw-wrap"><input id="currentPassword" type="password" placeholder="输入当前密码" class="auth-input"><button type="button" class="btn-action" style="position:absolute;right:4px;padding:2px 6px;font-size:12px;" onclick="togglePw('currentPassword',this)">👁️</button></div></div>
+        <div class="calc-field"><label>当前密码</label><input id="currentPassword" type="password" placeholder="输入当前密码"></div>
       </div>
       <div class="calc-row">
-        <div class="calc-field"><label>新密码</label><div class="auth-pw-wrap"><input id="newPassword" type="password" placeholder="输入新密码（留空则不修改）" class="auth-input"><button type="button" class="btn-action" style="position:absolute;right:4px;padding:2px 6px;font-size:12px;" onclick="togglePw('newPassword',this)">👁️</button></div></div>
-        <div class="calc-field"><label>确认新密码</label><div class="auth-pw-wrap"><input id="confirmPassword" type="password" placeholder="再次输入新密码" class="auth-input"><button type="button" class="btn-action" style="position:absolute;right:4px;padding:2px 6px;font-size:12px;" onclick="togglePw('confirmPassword',this)">👁️</button></div></div>
+        <div class="calc-field"><label>新密码</label><input id="newPassword" type="password" placeholder="输入新密码（留空则不修改）"></div>
+        <div class="calc-field"><label>确认新密码</label><input id="confirmPassword" type="password" placeholder="再次输入新密码"></div>
       </div>
       <button class="btn-primary" onclick="changeResidentCredentials()" style="margin-top:8px;">💾 保存凭据修改</button>
       <div id="credChangeMsg" style="margin-top:8px;font-size:13px;"></div>
@@ -3879,7 +3212,7 @@ function renderUserForm() {
     <form id="userForm" onsubmit="event.preventDefault();saveUserForm();">
       <div class="calc-row">
         <div class="calc-field"><label>${t('name')}</label><input name="name" value="${u.name}" ${role==='resident'?'readonly style="background:var(--input-bg);opacity:0.7;"':''}></div>
-        <div class="calc-field"><label>${t('gender')}</label><select name="gender"><option value="male" ${u.gender==='male'?'selected':''}>${t('male')}</option><option value="female" ${u.gender==='female'?'selected':''}>${t('female')}</option></select></div>
+        <div class="calc-field"><label>${t('gender')}</label><select name="gender" ${role==='resident'?'disabled':''}><option value="male" ${u.gender==='male'?'selected':''}>${t('male')}</option><option value="female" ${u.gender==='female'?'selected':''}>${t('female')}</option></select></div>
       </div>
       <div class="calc-row">
         <div class="calc-field"><label>${t('age')}</label><input name="age" type="number" value="${u.age}"></div>
@@ -3997,9 +3330,9 @@ function showChangeKeyModal() {
   modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;';
   modal.innerHTML = `<div style="background:var(--card-bg);border-radius:16px;padding:32px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
     <h3 style="color:var(--accent-light);margin-bottom:16px;">🔑 修改管理员密钥</h3>
-    <div style="margin-bottom:12px;"><label style="font-size:13px;color:var(--text-muted);">当前密钥</label><div class="auth-pw-wrap"><input type="password" id="oldKeyInput" class="auth-input" placeholder="输入当前密钥" style="width:100%;"><button type="button" class="btn-action" style="position:absolute;right:4px;padding:2px 6px;font-size:12px;" onclick="togglePw('oldKeyInput',this)">👁️</button></div></div>
-    <div style="margin-bottom:12px;"><label style="font-size:13px;color:var(--text-muted);">新密钥</label><div class="auth-pw-wrap"><input type="password" id="newKeyInput" class="auth-input" placeholder="输入新密钥" style="width:100%;"><button type="button" class="btn-action" style="position:absolute;right:4px;padding:2px 6px;font-size:12px;" onclick="togglePw('newKeyInput',this)">👁️</button></div></div>
-    <div style="margin-bottom:16px;"><label style="font-size:13px;color:var(--text-muted);">确认新密钥</label><div class="auth-pw-wrap"><input type="password" id="confirmKeyInput" class="auth-input" placeholder="再次输入新密钥" style="width:100%;"><button type="button" class="btn-action" style="position:absolute;right:4px;padding:2px 6px;font-size:12px;" onclick="togglePw('confirmKeyInput',this)">👁️</button></div></div>
+    <div style="margin-bottom:12px;"><label style="font-size:13px;color:var(--text-muted);">当前密钥</label><input type="password" id="oldKeyInput" class="auth-input" placeholder="输入当前密钥" style="width:100%;"></div>
+    <div style="margin-bottom:12px;"><label style="font-size:13px;color:var(--text-muted);">新密钥</label><input type="password" id="newKeyInput" class="auth-input" placeholder="输入新密钥" style="width:100%;"></div>
+    <div style="margin-bottom:16px;"><label style="font-size:13px;color:var(--text-muted);">确认新密钥</label><input type="password" id="confirmKeyInput" class="auth-input" placeholder="再次输入新密钥" style="width:100%;"></div>
     <div id="changeKeyMsg" style="margin-bottom:12px;font-size:13px;"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button onclick="document.getElementById('changeKeyModal').remove()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);cursor:pointer;">取消</button>
@@ -4068,7 +3401,7 @@ function showSecurityQuestionModal() {
     <div style="margin-bottom:12px;"><label style="font-size:13px;color:var(--text-muted);">安全问题</label><input id="secQuestion" class="auth-input" placeholder="例如：您的出生城市是？" value="${currentQuestion}" style="width:100%;"></div>
     <div style="margin-bottom:12px;"><label style="font-size:13px;color:var(--text-muted);">答案</label><input id="secAnswer" class="auth-input" placeholder="输入安全问题的答案" style="width:100%;"></div>
     <div style="margin-bottom:12px;"><label style="font-size:13px;color:var(--text-muted);">确认答案</label><input id="secAnswerConfirm" class="auth-input" placeholder="再次输入答案" style="width:100%;"></div>
-    <div style="margin-bottom:16px;"><label style="font-size:13px;color:var(--text-muted);">当前密钥（验证身份）</label><div class="auth-pw-wrap"><input type="password" id="secCurrentKey" class="auth-input" placeholder="输入当前管理员密钥" style="width:100%;"><button type="button" class="btn-action" style="position:absolute;right:4px;padding:2px 6px;font-size:12px;" onclick="togglePw('secCurrentKey',this)">👁️</button></div></div>
+    <div style="margin-bottom:16px;"><label style="font-size:13px;color:var(--text-muted);">当前密钥（验证身份）</label><input type="password" id="secCurrentKey" class="auth-input" placeholder="输入当前管理员密钥" style="width:100%;"></div>
     <div id="secQuestionMsg" style="margin-bottom:12px;font-size:13px;"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button onclick="document.getElementById('securityQuestionModal').remove()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);cursor:pointer;">取消</button>
@@ -4183,8 +3516,8 @@ async function loadSecurityQuestionForReset() {
     <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px;">请回答以下安全问题以验证身份：</p>
     <div style="background:var(--input-bg);border-radius:8px;padding:12px;margin-bottom:16px;font-weight:bold;color:var(--accent-light);">${question}</div>
     <div style="margin-bottom:12px;"><input id="forgotAnswer" class="auth-input" placeholder="输入安全问题的答案" style="width:100%;"></div>
-    <div style="margin-bottom:12px;"><label style="font-size:13px;color:var(--text-muted);">新密钥</label><div class="auth-pw-wrap"><input type="password" id="forgotNewKey" class="auth-input" placeholder="输入新密钥" style="width:100%;"><button type="button" class="btn-action" style="position:absolute;right:4px;padding:2px 6px;font-size:12px;" onclick="togglePw('forgotNewKey',this)">👁️</button></div></div>
-    <div style="margin-bottom:16px;"><label style="font-size:13px;color:var(--text-muted);">确认新密钥</label><div class="auth-pw-wrap"><input type="password" id="forgotConfirmKey" class="auth-input" placeholder="再次输入新密钥" style="width:100%;"><button type="button" class="btn-action" style="position:absolute;right:4px;padding:2px 6px;font-size:12px;" onclick="togglePw('forgotConfirmKey',this)">👁️</button></div></div>
+    <div style="margin-bottom:12px;"><label style="font-size:13px;color:var(--text-muted);">新密钥</label><input type="password" id="forgotNewKey" class="auth-input" placeholder="输入新密钥" style="width:100%;"></div>
+    <div style="margin-bottom:16px;"><label style="font-size:13px;color:var(--text-muted);">确认新密钥</label><input type="password" id="forgotConfirmKey" class="auth-input" placeholder="再次输入新密钥" style="width:100%;"></div>
     <div id="forgotKeyMsg" style="margin-bottom:12px;font-size:13px;"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button onclick="document.getElementById('forgotKeyModal').remove()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);cursor:pointer;">取消</button>
@@ -5106,233 +4439,76 @@ function addDietFood() {
   document.getElementById('addDietModal').classList.add('show');
   // Initialize food search list
   allFoodsForDiet = FOOD_DB.map(function(f){ return {id:f.id, name:f.name, nameEn:f.nameEn||''}; });
-  // Populate meal selector
-  const mealSelect = document.getElementById('dietMealSelect');
-  if (mealSelect) {
-    const meals = getCurrentUserDiet(selectedDietDate);
-    mealSelect.innerHTML = (Array.isArray(meals) ? meals : [{mealIndex:0, mealName:'第一餐'}]).map((m, i) =>
-      `<option value="${i}">${m.mealName || '第'+(i+1)+'餐'}</option>`
-    ).join('');
-  }
 }
 function closeAddDietModal() { document.getElementById('addDietModal').classList.remove('show'); }
 function confirmAddDietFood() {
   if (!currentUser) { alert(currentLang==='zh'?'请先选择用户档案':'Please select a user profile first'); return; }
   const id = document.getElementById('dietFoodSelect').value;
-  const rawAmount = parseFloat(document.getElementById('dietFoodAmount').value) || 100;
-  const unitSelect = document.getElementById('dietFoodUnit');
-  const gramsPerUnit = parseFloat(unitSelect?.value) || 1;
-  const amount = Math.round(rawAmount * gramsPerUnit); // Convert to grams
-  const targetMealIdx = parseInt(document.getElementById('dietMealSelect')?.value || '0');
+  const amount = parseFloat(document.getElementById('dietFoodAmount').value) || 100;
   if (!id) { alert(currentLang==='zh'?'请选择食物':'Please select a food'); return; }
   if (!allDietData[currentUser.id]) allDietData[currentUser.id] = {};
-  if (!allDietData[currentUser.id][selectedDietDate]) allDietData[currentUser.id][selectedDietDate] = [{mealIndex:0, mealName:'第一餐', items:[]}];
-  const meals = allDietData[currentUser.id][selectedDietDate];
-  // Ensure meal-based structure
-  if (Array.isArray(meals) && meals.length > 0 && meals[0].items) {
-    const targetMeal = meals[targetMealIdx] || meals[0];
-    targetMeal.items.push({foodId:id, amount:amount});
-  } else {
-    // Fallback for old format
-    allDietData[currentUser.id][selectedDietDate] = [{mealIndex:0, mealName:'第一餐', items:[{foodId:id, amount:amount}]}];
-  }
+  if (!allDietData[currentUser.id][selectedDietDate]) allDietData[currentUser.id][selectedDietDate] = [];
+  allDietData[currentUser.id][selectedDietDate].push({foodId:id, amount:amount});
   saveDietData();
-  // Verify data was saved
-  const saved = JSON.parse(localStorage.getItem('nutripro_allDietData') || '{}');
-  if (saved[currentUser.id] && saved[currentUser.id][selectedDietDate]) {
-    console.log('Diet data verified: saved for', selectedDietDate);
-  } else {
-    console.error('Diet data save verification failed!');
-  }
   closeAddDietModal();
   renderDietFoods();
-  showSyncNotification('✅ ' + (currentLang==='zh'?'食物已添加':'Food added'));
 }
 function renderDietFoods() {
   const el = document.getElementById('dietFoodList');
   if(!el) return;
-  if (!currentUser) { el.innerHTML=''; return; }
+  const dietFoods = getDietFoodsForSelectedDates();
+  if(dietFoods.length===0) { el.innerHTML=`<p style="color:var(--text-muted);">${currentLang==='zh'?'暂无饮食记录':'No diet entries'}</p>`; return; }
   const isRange = dietViewMode === 'range';
+  // group by date for range view
   let html = '';
-
   if (isRange) {
     let d = new Date(dietDateRange.start);
     let end = new Date(dietDateRange.end);
     while (d <= end) {
       let ds = d.toISOString().split('T')[0];
-      let meals = getCurrentUserDiet(ds);
-      let dayItems = getCurrentUserDietFlat(ds);
-      if (dayItems.length > 0) {
+      let dayFoods = getCurrentUserDiet(ds);
+      if (dayFoods.length > 0) {
         html += `<div style="margin-top:12px;padding:8px 0;border-top:2px solid var(--accent);"><strong style="color:var(--accent-light);">${ds}</strong></div>`;
-        meals.forEach((meal, mi) => {
-          html += renderMealSection(meal, mi, ds);
+        dayFoods.forEach((item, idx) => {
+          const f = FOOD_DB.find(x=>x.id===item.foodId);
+          if(!f) return;
+          const cal = Math.round(parseFloat(f.energyKCal||0)*item.amount/100);
+          // find global index for removal
+          const gIdx = allDietData[currentUser.id][ds].indexOf(item);
+          html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);">
+            <span style="flex:1;">${f.name}</span>
+            <span style="color:var(--text-muted);">${item.amount}g</span>
+            <span style="color:var(--accent-light);font-weight:600;">${cal} kcal</span>
+            <button class="btn-action" style="padding:2px 8px;font-size:11px;" onclick="removeDietFood('${ds}',${gIdx})">✕</button>
+          </div>`;
         });
       }
       d.setDate(d.getDate() + 1);
     }
   } else {
-    const meals = getCurrentUserDiet(selectedDietDate);
-    if (!Array.isArray(meals) || meals.length === 0) {
-      // Ensure at least one meal exists
-      if (!allDietData[currentUser.id]) allDietData[currentUser.id] = {};
-      allDietData[currentUser.id][selectedDietDate] = [{mealIndex:0, mealName:'第一餐', items:[]}];
-    }
-    const currentMeals = getCurrentUserDiet(selectedDietDate);
-    currentMeals.forEach((meal, mi) => {
-      html += renderMealSection(meal, mi, selectedDietDate);
-    });
-    html += `<button class="btn-action" style="margin-top:8px;font-size:12px;padding:4px 12px;" onclick="addMeal()">+ 添加餐次</button>`;
+    html = dietFoods.map((d,i) => {
+      const f = FOOD_DB.find(x=>x.id===d.foodId);
+      if(!f) return '';
+      const cal = Math.round(parseFloat(f.energyKCal||0)*d.amount/100);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);">
+        <span style="flex:1;">${f.name}</span>
+        <span style="color:var(--text-muted);">${d.amount}g</span>
+        <span style="color:var(--accent-light);font-weight:600;">${cal} kcal</span>
+        <button class="btn-action" style="padding:2px 8px;font-size:11px;" onclick="removeDietFood('${selectedDietDate}',${i})">✕</button>
+      </div>`;
+    }).join('');
   }
-  // Render photos
-  html += renderDietPhotos(selectedDietDate);
   el.innerHTML = html;
 }
-
-function renderMealSection(meal, mealIdx, dateStr) {
-  if (!meal || !Array.isArray(meal.items)) return '';
-  let html = `<div style="margin-bottom:12px;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:rgba(79,70,229,0.1);cursor:pointer;" onclick="renameMeal(${mealIdx})">
-      <strong style="color:var(--accent-light);">🍽️ ${meal.mealName}</strong>
-      <div style="display:flex;gap:4px;">
-        <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="event.stopPropagation();copyMeal('${dateStr}',${mealIdx})" title="复制整餐">📋</button>
-        <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="event.stopPropagation();removeMeal(${mealIdx})" title="删除餐次">✕</button>
-      </div>
-    </div>`;
-  if (meal.items.length === 0) {
-    html += `<div style="padding:8px 12px;color:var(--text-muted);font-size:13px;">暂无食物，点击下方添加</div>`;
-  } else {
-    meal.items.forEach((item, idx) => {
-      // Check if supplement
-      const supp = item.isSupplement ? SUPPLEMENT_DB.find(s => s.id === item.foodId) : null;
-      const suppCustom = item.isSupplement && !supp;
-      if (item.isSupplement) {
-        const name = supp ? supp.name : (item.suppName || '自定义补剂');
-        const servings = item.suppServings || 1;
-        const cal = supp ? convertEnergy(Math.round(supp.energyKCal * servings)) : 0;
-        const protein = supp ? (supp.protein * servings).toFixed(1) : '0.0';
-        const fat = supp ? (supp.fat * servings).toFixed(1) : '0.0';
-        const cho = supp ? (supp.CHO * servings).toFixed(1) : '0.0';
-        html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);background:rgba(139,92,246,0.05);">
-          <span style="flex:1;font-size:13px;">💊 ${name}</span>
-          <span style="color:var(--text-muted);font-size:12px;">${servings}份</span>
-          <span style="color:var(--text-muted);font-size:11px;">P${protein}g F${fat}g C${cho}g</span>
-          <span style="color:var(--accent-light);font-weight:600;font-size:13px;">${cal}${energyLabel()}</span>
-          <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="event.stopPropagation();removeDietFoodFromMeal('${dateStr}',${mealIdx},${idx})">✕</button>
-        </div>`;
-      } else {
-        const f = FOOD_DB.find(x=>x.id===item.foodId);
-        if(!f) return;
-        const cal = convertEnergy(Math.round(parseFloat(f.energyKCal||0)*item.amount/100));
-        const protein = (parseFloat(f.protein||0)*item.amount/100).toFixed(1);
-        const fat = (parseFloat(f.fat||0)*item.amount/100).toFixed(1);
-        const cho = (parseFloat(f.CHO||0)*item.amount/100).toFixed(1);
-        html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);cursor:pointer;" onclick="showFoodDetail('${item.foodId}',${item.amount})">
-          <span style="flex:1;font-size:13px;">${f.name}</span>
-          <span style="color:var(--text-muted);font-size:12px;">${item.amount}g</span>
-          <span style="color:var(--text-muted);font-size:11px;">P${protein}g F${fat}g C${cho}g</span>
-          <span style="color:var(--accent-light);font-weight:600;font-size:13px;">${cal}${energyLabel()}</span>
-          <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="event.stopPropagation();copyDietItem('${dateStr}',${mealIdx},${idx})" title="复制">📋</button>
-          <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="event.stopPropagation();removeDietFoodFromMeal('${dateStr}',${mealIdx},${idx})">✕</button>
-        </div>`;
-      }
-    });
-  }
-  html += `</div>`;
-  return html;
-}
-
-function removeDietFoodFromMeal(dateStr, mealIdx, itemIdx) {
+function removeDietFood(dateStr, idx) {
   if (!currentUser) return;
-  const meals = allDietData[currentUser.id]?.[dateStr];
-  if (!Array.isArray(meals) || !meals[mealIdx] || !meals[mealIdx].items) return;
-  meals[mealIdx].items.splice(itemIdx, 1);
-  saveDietData();
-  renderDietFoods();
-}
-
-function copyDietItem(dateStr, mealIdx, itemIdx) {
-  if (!currentUser) return;
-  const meals = allDietData[currentUser.id]?.[dateStr];
-  if (!Array.isArray(meals) || !meals[mealIdx] || !meals[mealIdx].items[itemIdx]) return;
-  const item = meals[mealIdx].items[itemIdx];
-  // Copy to current date's first meal
-  const currentMeals = getCurrentUserDiet(selectedDietDate);
-  if (Array.isArray(currentMeals) && currentMeals.length > 0 && currentMeals[0].items) {
-    currentMeals[0].items.push({foodId: item.foodId, amount: item.amount});
-    saveDietData();
-    renderDietFoods();
-    showSyncNotification('✅ 已复制到当前记录');
-  }
-}
-
-function copyMeal(dateStr, mealIdx) {
-  if (!currentUser) return;
-  const meals = allDietData[currentUser.id]?.[dateStr];
-  if (!Array.isArray(meals) || !meals[mealIdx]) return;
-  const sourceMeal = meals[mealIdx];
-  // Copy all items to current date as a new meal
-  const currentMeals = getCurrentUserDiet(selectedDietDate);
-  if (Array.isArray(currentMeals)) {
-    const newIdx = currentMeals.length;
-    currentMeals.push({
-      mealIndex: newIdx,
-      mealName: sourceMeal.mealName + '(副本)',
-      items: sourceMeal.items.map(item => ({foodId: item.foodId, amount: item.amount}))
-    });
-    saveDietData();
-    renderDietFoods();
-    showSyncNotification('✅ 已复制整餐到当前记录');
-  }
-}
-
-function showFoodDetail(foodId, amount) {
-  const f = FOOD_DB.find(x => x.id === foodId);
-  if (!f) return;
-  const ratio = (amount || 100) / 100;
-  const fields = [
-    ['热量', (f.energyKCal||0)*ratio, 'kcal'], ['蛋白质', (f.protein||0)*ratio, 'g'],
-    ['脂肪', (f.fat||0)*ratio, 'g'], ['碳水化合物', (f.CHO||0)*ratio, 'g'],
-    ['膳食纤维', (f.dietaryFiber||0)*ratio, 'g'], ['胆固醇', (f.cholesterol||0)*ratio, 'mg'],
-    ['钙', (f.Ca||0)*ratio, 'mg'], ['磷', (f.P||0)*ratio, 'mg'],
-    ['钾', (f.K||0)*ratio, 'mg'], ['钠', (f.Na||0)*ratio, 'mg'],
-    ['镁', (f.Mg||0)*ratio, 'mg'], ['铁', (f.Fe||0)*ratio, 'mg'],
-    ['锌', (f.Zn||0)*ratio, 'mg'], ['硒', (f.Se||0)*ratio, 'μg'],
-    ['维生素A', (f.vitaminA||0)*ratio, 'μg'], ['维生素B1', (f.thiamin||0)*ratio, 'mg'],
-    ['维生素B2', (f.riboflavin||0)*ratio, 'mg'], ['烟酸', (f.niacin||0)*ratio, 'mg'],
-    ['维生素C', (f.vitaminC||0)*ratio, 'mg'], ['维生素E', (f.vitaminETotal||0)*ratio, 'mg'],
-  ];
-  const modal = document.createElement('div');
-  modal.id = 'foodDetailModal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;';
-  modal.innerHTML = `<div style="background:var(--card-bg);border-radius:16px;padding:24px;max-width:400px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h3 style="color:var(--accent-light);margin:0;">${f.name}</h3>
-      <button onclick="document.getElementById('foodDetailModal').remove()" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;">✕</button>
-    </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">${amount}g 食用的营养成分</div>
-    <table style="width:100%;font-size:13px;border-collapse:collapse;">
-      ${fields.map(([name, val, unit]) => `<tr style="border-bottom:1px solid var(--border);"><td style="padding:4px 0;">${name}</td><td style="padding:4px 0;text-align:right;font-weight:600;">${typeof val==='number'?val.toFixed(1):val} ${unit}</td></tr>`).join('')}
-    </table>
-    ${f.fodmap ? `<div style="margin-top:12px;font-size:12px;color:var(--text-muted);">FODMAP: ${f.fodmap}</div>` : ''}
-  </div>`;
-  document.body.appendChild(modal);
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-}
-
-function removeDietFood(dateStr, flatIdx) {
-  // Legacy support: remove by flat index
-  if (!currentUser) return;
-  const meals = allDietData[currentUser.id]?.[dateStr];
-  if (!Array.isArray(meals)) return;
-  let count = 0;
-  for (let mi = 0; mi < meals.length; mi++) {
-    if (flatIdx < count + meals[mi].items.length) {
-      meals[mi].items.splice(flatIdx - count, 1);
-      saveDietData();
-      renderDietFoods();
-      return;
+  if (allDietData[currentUser.id] && allDietData[currentUser.id][dateStr]) {
+    allDietData[currentUser.id][dateStr].splice(idx, 1);
+    if (allDietData[currentUser.id][dateStr].length === 0) {
+      delete allDietData[currentUser.id][dateStr];
     }
-    count += meals[mi].items.length;
+    saveDietData();
+    renderDietFoods();
   }
 }
 
@@ -5525,7 +4701,6 @@ function selectDietFood(id, name) {
   document.getElementById('dietFoodSelect').value = id;
   document.getElementById('dietFoodSearch').value = name;
   document.getElementById('dietFoodDropdown').style.display = 'none';
-  updateFoodUnits();
 }
 function init() {
   // Initialize auth system
@@ -5594,9 +4769,6 @@ function init() {
     if (getCurrentRole() === 'admin') {
       renderAdminSidebar();
     }
-    // Initialize health data
-    loadHealthData();
-    renderHealthDateControls();
   }
 }
 
