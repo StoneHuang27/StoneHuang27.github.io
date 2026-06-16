@@ -1,0 +1,57 @@
+# Temp / debug files
+temp_*.js
+diagnose_*.py
+diagnose*.py
+check_*.js
+check_*.py
+find_*.py
+fix_*.py
+validate_data.py
+verify_syntax.py
+build_final_html.py
+process_food_data.py
+enrich_food_data.py
+download_food_data.py
+rebuild_clean.py
+fix_init.py
+full_status_check.py
+find_all_fooddb.py
+find_duplicates.py
+fix_duplicate.py
+
+# Backup HTML files
+*_backup*.html
+营养数据平台_*.html
+*_skeleton.html
+test_init.html
+
+# Raw data (keep but don't track for clutter)
+food_data_raw/
+food_data_*.json
+solutions-archive.json
+
+# Build output
+*.min.js
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node / npm
+node_modules/
+package-lock.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project internal
+.codebuddy/
+.workbuddy/
+
+# Debug / temp directories
+"web bug fix3/"
+"初识项目/"
