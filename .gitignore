@@ -53,5 +53,8 @@ Thumbs.db
 .workbuddy/
 
 # Debug / temp directories
-"web bug fix3/"
-"初识项目/"
+web bug fix3/
+初识项目/
+
+# Large personal documents (too big for GitHub)
+知识库/
