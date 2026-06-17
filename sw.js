@@ -4,7 +4,7 @@
 // Purpose: Offline support via cache-first strategy
 // ============================================================
 
-const CACHE_NAME = 'nutripro-v1';
+const CACHE_NAME = 'nutripro-v2';
 const RUNTIME_CACHE = 'nutripro-runtime-v1';
 
 // Static assets to cache on install
