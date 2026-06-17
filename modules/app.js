@@ -3,6 +3,9 @@
 // siteName, activeFodmapFilter, activeProteinFilter declared in state.js
 function showSettings() {
   document.getElementById('settingSiteName').value = siteName || 'NutriPro 运动营养数据平台';
+  // Set energy unit radio
+  const radios = document.querySelectorAll('input[name="energyUnit"]');
+  radios.forEach(function(r) { r.checked = (r.value === energyUnit); });
   document.getElementById('settingsModal').classList.add('show');
 }
 function closeSettings() { document.getElementById('settingsModal').classList.remove('show'); }
@@ -10,6 +13,12 @@ function saveSettings() {
   siteName = document.getElementById('settingSiteName').value || 'NutriPro 运动营养数据平台';
   localStorage.setItem('nutripro_siteName', siteName);
   applySiteName();
+  // Save energy unit preference
+  const radios = document.querySelectorAll('input[name="energyUnit"]:checked');
+  if (radios.length > 0) {
+    energyUnit = radios[0].value;
+    localStorage.setItem('nutripro_energyUnit', energyUnit);
+  }
   closeSettings();
 }
 function applySiteName() {
@@ -59,6 +68,52 @@ function init() {
         allDietData[currentUser.id][today] = oldFoods;
         saveDietData();
         localStorage.removeItem('nutripro_dietFoods');
+      }
+    }
+  } catch(e) { console.warn('Diet migration error:', e); }
+
+  // v1.2 migration: normalize user data (snake_case → camelCase)
+  try {
+    const rawUsers = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
+    let needsFix = false;
+    const normalized = rawUsers.map(function(u) {
+      if (u.password_hash && !u.passwordHash) needsFix = true;
+      return {
+        ...u,
+        passwordHash: u.password_hash || u.passwordHash,
+        trainingYears: u.training_years || u.trainingYears,
+        grantedPermissions: u.granted_permissions || u.grantedPermissions
+      };
+    });
+    if (needsFix) {
+      localStorage.setItem('nutripro_users', JSON.stringify(normalized));
+      users = normalized;
+      console.log('Migration: Normalized user data from snake_case to camelCase');
+    }
+  } catch(e) { console.warn('User normalization migration error:', e); }
+
+  // v1.2 migration: migrate flat diet arrays to per-meal structure
+  try {
+    const rawDiet = localStorage.getItem('nutripro_allDietData');
+    if (rawDiet) {
+      const dietObj = JSON.parse(rawDiet);
+      let dietNeedsFix = false;
+      Object.keys(dietObj).forEach(function(uid) {
+        Object.keys(dietObj[uid]).forEach(function(date) {
+          if (Array.isArray(dietObj[uid][date])) {
+            dietObj[uid][date] = {
+              meals: {
+                'ungrouped': { name: '未分组', foods: dietObj[uid][date] }
+              }
+            };
+            dietNeedsFix = true;
+          }
+        });
+      });
+      if (dietNeedsFix) {
+        localStorage.setItem('nutripro_allDietData', JSON.stringify(dietObj));
+        allDietData = dietObj;
+        console.log('Migration: Converted flat diet arrays to per-meal structure');
       }
     }
   } catch(e) { console.warn('Diet migration error:', e); }
@@ -120,6 +175,12 @@ function init() {
     if (getCurrentRole() === 'admin') {
       renderAdminSidebar();
     }
+  }
+
+  // Initialize health dashboard and supplement tracker
+  if (currentUser && hasPermission('diet')) {
+    renderHealthDashboard();
+    renderSupplementTracker();
   }
 }
 

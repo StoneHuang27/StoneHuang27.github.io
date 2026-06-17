@@ -35,6 +35,24 @@ let editingFoodId = null; // null = adding new food
 let appModalType = '';
 let appModalTarget = '';
 
+// ===== USER-EDITED FOODS =====
+let userFoods = JSON.parse(localStorage.getItem('nutripro_userFoods') || '[]');
+
+// ===== HEALTH DATA =====
+let healthData = JSON.parse(localStorage.getItem('nutripro_healthData') || '{}');
+
+// ===== ENERGY UNIT PREFERENCE =====
+let energyUnit = localStorage.getItem('nutripro_energyUnit') || 'kcal';
+
+// ===== DIET CLIPBOARD =====
+let dietClipboard = null;
+
+// ===== AUDIT LOG =====
+let auditLog = JSON.parse(localStorage.getItem('nutripro_auditLog') || '[]');
+
+// ===== SUPPLEMENT LOG =====
+let supplementLog = JSON.parse(localStorage.getItem('nutripro_supplementLog') || '{}');
+
 // ===== UI STATE =====
 let siteName = localStorage.getItem('nutripro_siteName') || '';
 

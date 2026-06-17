@@ -119,7 +119,7 @@ function renderFoodGrid() {
       ${fodmapText ? `<div class="fodmap-badge" style="background:${fodmapColor}">${fodmapText}</div>` : ''}
       <div class="name">${f.name}</div>
       <div class="name-en">${f.nameEn||''}</div>
-      <div class="cal">${f.energyKCal||0} <span class="cal-unit">kcal/100g</span></div>
+      <div class="cal">${formatEnergyValue(f.energyKCal||0)} <span class="cal-unit">${energyUnit==='kj'?'kJ':'kcal'}/100g</span></div>
       <div class="macros">
         <div class="macro"><div class="val">${f.protein||0}g</div>P</div>
         <div class="macro"><div class="val">${f.fat||0}g</div>F</div>
@@ -209,7 +209,7 @@ function showFoodDetail(id) {
       </div>
       <div class="attr-content show">
         <table class="nutrient-table">
-          <tr><td>热量</td><td class="val">${f.energyKCal||0} kcal</td></tr>
+          <tr><td>热量</td><td class="val">${formatEnergy(f.energyKCal||0)}</td></tr>
           <tr><td>蛋白质</td><td class="val">${f.protein||0} g (${pPct}%)</td></tr>
           <tr><td>脂肪</td><td class="val">${f.fat||0} g (${fPct}%)</td></tr>
           <tr><td>碳水化合物</td><td class="val">${f.CHO||0} g (${cPct}%)</td></tr>
@@ -364,7 +364,7 @@ function showCompare() {
   if (selectedFoods.length < 2) return;
   const foods = selectedFoods.map(id => FOOD_DB.find(f=>f.id===id)).filter(Boolean);
   const attrs = ['energyKCal','protein','fat','CHO','dietaryFiber','Ca','Fe','Zn','K','Na'];
-  const attrNames = {energyKCal:'热量(kcal)',protein:'蛋白质(g)',fat:'脂肪(g)',CHO:'碳水(g)',dietaryFiber:'膳食纤维(g)',Ca:'钙(mg)',Fe:'铁(mg)',Zn:'锌(mg)',K:'钾(mg)',Na:'钠(mg)'};
+  const attrNames = {energyKCal:'热量('+ (energyUnit==='kj'?'kJ':'kcal') +')',protein:'蛋白质(g)',fat:'脂肪(g)',CHO:'碳水(g)',dietaryFiber:'膳食纤维(g)',Ca:'钙(mg)',Fe:'铁(mg)',Zn:'锌(mg)',K:'钾(mg)',Na:'钠(mg)'};
   const el = document.getElementById('compareContent');
   el.innerHTML = `
     <div style="overflow-x:auto;">

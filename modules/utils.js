@@ -56,6 +56,7 @@ const i18n = {
     cat_nut: "坚果种子", cat_oil: "油脂", cat_drink: "饮品",
     cat_tuber: "薯类/淀粉", cat_infant: "婴幼儿食品", cat_fastfood: "速食食品", cat_alcohol: "含酒精饮料", cat_supplement: "运动补剂", cat_processed: "加工食品", cat_chinese: "中式特色", cat_seasoning: "调味品", cat_snack: "零食/甜饼", cat_sugar: "糖果/蜂蜜", cat_condiment: "调味品", cat_fungus: "菌藻类", cat_other: "其他", settings: "设置", site_name: "网站名称",
     no_diet_entries: "暂无饮食记录",
+    energy_unit: "能量单位", kcal: "千卡(kcal)", kj: "千焦(kJ)", settings_save: "保存设置",
   },
   en: {
     food_db: "🍎 Food Database", calc_tools: "🧮 Calculators", diet_log: "📋 Diet Log",
@@ -99,6 +100,7 @@ const i18n = {
     cat_nut: "Nuts/Seeds", cat_oil: "Oils", cat_drink: "Beverages",
     cat_tuber: "Tubers/Starch", cat_infant: "Infant Food", cat_fastfood: "Fast Food", cat_alcohol: "Alcoholic Drinks", cat_supplement: "Supplements", cat_processed: "Processed", cat_chinese: "Chinese", cat_seasoning: "Seasonings", cat_snack: "Snacks/Pastries", cat_sugar: "Sugar/Honey", cat_condiment: "Condiments", cat_fungus: "Fungi/Algae", cat_other: "Other", settings: "Settings", site_name: "Site Name",
     no_diet_entries: "No diet entries",
+    energy_unit: "Energy Unit", kcal: "kcal", kj: "kJ", settings_save: "Save Settings",
   }
 };
 let currentLang = localStorage.getItem('nutripro_lang') || 'zh';
@@ -121,4 +123,19 @@ function applyI18n() {
     const key = el.getAttribute('data-i18n-placeholder');
     if (i18n[currentLang][key]) el.placeholder = i18n[currentLang][key];
   });
+}
+
+// ===== ENERGY UNIT FORMATTING =====
+function formatEnergy(kcal) {
+  if (typeof kcal !== 'number') kcal = parseFloat(kcal) || 0;
+  if (energyUnit === 'kj') return (kcal * 4.184).toFixed(1) + ' kJ';
+  return kcal + ' kcal';
+}
+function formatEnergyValue(kcal) {
+  if (typeof kcal !== 'number') kcal = parseFloat(kcal) || 0;
+  if (energyUnit === 'kj') return (kcal * 4.184).toFixed(1);
+  return kcal;
+}
+function toKcal(value) {
+  return energyUnit === 'kj' ? value / 4.184 : value;
 }

@@ -155,6 +155,15 @@ function submitFoodEdit() {
       data.id = 'CF' + Date.now().toString(36).toUpperCase();
       FOOD_DB.push(data);
     }
+    // Persist to localStorage (v1.2)
+    userFoods.push({
+      action: editingFoodId ? 'edit' : 'add',
+      foodId: data.id,
+      data: data,
+      timestamp: Date.now(),
+      editorId: currentSession ? currentSession.userId : 'admin'
+    });
+    localStorage.setItem('nutripro_userFoods', JSON.stringify(userFoods));
     closeFoodEditModal();
     closeModal();
     renderFoodSidebar();
@@ -202,10 +211,26 @@ function approveFoodEditApp(appId) {
       app.data.id = app.foodId;
       FOOD_DB[idx] = app.data;
     }
+    // Persist to userFoods (v1.2)
+    userFoods.push({
+      action: 'edit',
+      foodId: app.foodId,
+      data: app.data,
+      timestamp: Date.now(),
+      editorId: 'admin'
+    });
   } else if (app.type === 'add') {
     app.data.id = 'CF' + Date.now().toString(36).toUpperCase();
     FOOD_DB.push(app.data);
+    userFoods.push({
+      action: 'add',
+      foodId: app.data.id,
+      data: app.data,
+      timestamp: Date.now(),
+      editorId: 'admin'
+    });
   }
+  localStorage.setItem('nutripro_userFoods', JSON.stringify(userFoods));
   
   renderFoodSidebar();
   renderFoodGrid();
@@ -231,20 +256,23 @@ function approveAllFoodEditApps() {
   pending.forEach(app => {
     app.status = 'approved';
     app.processedAt = Date.now();
-    
+
     if (app.type === 'edit' && app.foodId) {
       const idx = FOOD_DB.findIndex(f => f.id === app.foodId);
       if (idx >= 0) {
         app.data.id = app.foodId;
         FOOD_DB[idx] = app.data;
       }
+      userFoods.push({ action: 'edit', foodId: app.foodId, data: app.data, timestamp: Date.now(), editorId: 'admin' });
     } else if (app.type === 'add') {
       app.data.id = 'CF' + Date.now().toString(36).toUpperCase();
       FOOD_DB.push(app.data);
+      userFoods.push({ action: 'add', foodId: app.data.id, data: app.data, timestamp: Date.now(), editorId: 'admin' });
     }
   });
-  
+
   saveAuthData(auth);
+  localStorage.setItem('nutripro_userFoods', JSON.stringify(userFoods));
   renderFoodSidebar();
   renderFoodGrid();
   renderAdminSidebar();

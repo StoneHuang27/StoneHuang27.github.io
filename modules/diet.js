@@ -43,9 +43,19 @@ function getAvailableDietDates() {
 }
 
 function saveUsers() {
-  localStorage.setItem('nutripro_users', JSON.stringify(users));
+  // Normalize users array: ensure camelCase field names
+  const normalized = users.map(function(u) {
+    return {
+      ...u,
+      passwordHash: u.password_hash || u.passwordHash,
+      trainingYears: u.training_years || u.trainingYears,
+      grantedPermissions: u.granted_permissions || u.grantedPermissions
+    };
+  });
+  users = normalized;
+  localStorage.setItem('nutripro_users', JSON.stringify(normalized));
   localStorage.setItem('nutripro_currentUser', JSON.stringify(currentUser));
-  CloudSync.push('users', users);
+  CloudSync.push('users', normalized);
 }
 function addUser() {
   const user = {
@@ -69,6 +79,10 @@ function selectUser(id) {
   renderDietPage();
 }
 function deleteUser(id) {
+  const user = users.find(u => u.id === id);
+  if (!user) return;
+  if (!confirm(`确定要删除用户「${user.name}」吗？该操作不可恢复，该用户的饮食数据也会被删除。`)) return;
+  logAudit('delete_user', currentSession?.userId, `Deleted user ${user.name} (${id})`);
   // Delete user's diet data as well
   if (allDietData[id]) delete allDietData[id];
   saveDietData();
@@ -95,23 +109,66 @@ function saveUserForm() {
   saveUsers();
   renderUsers();
 }
-function renderUsers() {
+function renderUsers(filter, roleFilter) {
   try {
   const el = document.getElementById('userList');
   if (!el) return;
   const isAdmin = getCurrentRole() === 'admin';
-  el.innerHTML = users.filter(u => isAdmin || u.id === (currentUser && currentUser.id)).map(u => {
+  // Add search/filter controls for admin
+  let controlsHtml = '';
+  if (isAdmin) {
+    controlsHtml = `<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <input type="text" id="userSearch" placeholder="搜索用户名..." oninput="renderUsers(this.value, document.getElementById('userRoleFilter')?.value)" style="flex:1;min-width:150px;background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:13px;">
+      <select id="userRoleFilter" onchange="renderUsers(document.getElementById('userSearch')?.value, this.value)" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:13px;">
+        <option value="all">全部角色</option>
+        <option value="admin">管理员</option>
+        <option value="resident">常驻</option>
+        <option value="guest">普通</option>
+      </select>
+    </div>`;
+  }
+  // Prepend controls to the container
+  const container = document.getElementById('userListContainer');
+  if (container) container.innerHTML = controlsHtml + '<div id="userList"></div>';
+  let filtered = users.filter(u => isAdmin || u.id === (currentUser && currentUser.id));
+
+  // Role filter
+  if (roleFilter && roleFilter !== 'all') {
+    filtered = filtered.filter(u => u.role === roleFilter);
+  }
+
+  // Text search
+  if (filter) {
+    const q = filter.toLowerCase();
+    filtered = filtered.filter(u => u.name.toLowerCase().includes(q));
+  }
+
+  el.innerHTML = filtered.map(u => {
+    const isActive = u.isActive !== false; // default true for existing users
     const roleBadge = u.role === 'admin' ? '<span class="role-badge admin">管理员</span>' :
                       u.role === 'resident' ? '<span class="role-badge resident">常驻</span>' :
                       '<span class="role-badge guest">普通</span>';
     const presetTag = (u.role === 'resident' && !u.passwordHash) ? ' <span style="font-size:10px;background:rgba(59,130,246,0.2);color:var(--accent-light);padding:1px 6px;border-radius:8px;">待匹配</span>' : '';
-    return `<div class="user-card ${currentUser && currentUser.id===u.id?'active':''}" onclick="selectUser('${u.id}')">
+    const inactiveStyle = !isActive ? 'opacity:0.5;' : '';
+    return `<div class="user-card ${currentUser && currentUser.id===u.id?'active':''}" onclick="selectUser('${u.id}')" style="${inactiveStyle}">
       <div class="name">${escapeHtml(u.name)} ${roleBadge}${presetTag}</div>
       <div class="info">${t(u.gender==='male'?'male':'female')} | ${u.age}${t('age')} | ${u.weight}kg</div>
-      ${isAdmin && u.id !== 'admin' ? `<button class="btn-action" style="float:right;margin-top:-30px;font-size:11px;padding:2px 8px;" onclick="event.stopPropagation();deleteUser('${u.id}')">✕</button>` : ''}
+      ${isAdmin && u.id !== 'admin' ? `<div style="display:flex;gap:4px;margin-top:4px;">
+        <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="event.stopPropagation();toggleUserActive('${u.id}')" title="${isActive?'注销':'恢复'}">${isActive?'🔒 注销':'🔓 恢复'}</button>
+        <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="event.stopPropagation();deleteUser('${u.id}')" title="删除">✕ 删除</button>
+      </div>` : ''}
     </div>`;
   }).join('');
   } catch(e) { console.error('renderUsers error:', e); }
+}
+
+function toggleUserActive(userId) {
+  const user = users.find(u => u.id === userId);
+  if (!user) return;
+  user.isActive = (user.isActive === false) ? true : false;
+  logAudit(user.isActive ? 'reactivate_user' : 'deactivate_user', currentSession?.userId, `User ${user.name} (${userId}) ${user.isActive ? 'reactivated' : 'deactivated'}`);
+  saveUsers();
+  renderUsers(document.getElementById('userSearch')?.value, document.getElementById('userRoleFilter')?.value);
 }
 
 function renderUserForm() {
@@ -132,11 +189,29 @@ function renderUserForm() {
       <h4 style="color:var(--accent-light);margin-bottom:12px;">🔐 修改登录凭据</h4>
       <div class="calc-row">
         <div class="calc-field"><label>新用户名</label><input id="newUsername" value="${escapeHtml(u.name)}" placeholder="输入新用户名"></div>
-        <div class="calc-field"><label>当前密码</label><input id="currentPassword" type="password" placeholder="输入当前密码"></div>
+        <div class="calc-field">
+          <label>当前密码</label>
+          <div style="position:relative;">
+            <input id="currentPassword" type="password" placeholder="输入当前密码" style="padding-right:36px;">
+            <span onclick="togglePw('currentPassword',this)" style="position:absolute;right:8px;top:26px;cursor:pointer;font-size:16px;" title="显示/隐藏密码">👁️</span>
+          </div>
+        </div>
       </div>
       <div class="calc-row">
-        <div class="calc-field"><label>新密码</label><input id="newPassword" type="password" placeholder="输入新密码（留空则不修改）"></div>
-        <div class="calc-field"><label>确认新密码</label><input id="confirmPassword" type="password" placeholder="再次输入新密码"></div>
+        <div class="calc-field">
+          <label>新密码</label>
+          <div style="position:relative;">
+            <input id="newPassword" type="password" placeholder="输入新密码（留空则不修改）" style="padding-right:36px;">
+            <span onclick="togglePw('newPassword',this)" style="position:absolute;right:8px;top:26px;cursor:pointer;font-size:16px;" title="显示/隐藏密码">👁️</span>
+          </div>
+        </div>
+        <div class="calc-field">
+          <label>确认新密码</label>
+          <div style="position:relative;">
+            <input id="confirmPassword" type="password" placeholder="再次输入新密码" style="padding-right:36px;">
+            <span onclick="togglePw('confirmPassword',this)" style="position:absolute;right:8px;top:26px;cursor:pointer;font-size:16px;" title="显示/隐藏密码">👁️</span>
+          </div>
+        </div>
       </div>
       <button class="btn-primary" onclick="changeResidentCredentials()" style="margin-top:8px;">💾 保存凭据修改</button>
       <div id="credChangeMsg" style="margin-top:8px;font-size:13px;"></div>
@@ -146,7 +221,7 @@ function renderUserForm() {
     <form id="userForm" onsubmit="event.preventDefault();saveUserForm();">
       <div class="calc-row">
         <div class="calc-field"><label>${t('name')}</label><input name="name" value="${escapeHtml(u.name)}" ${role==='resident'?'readonly style="background:var(--input-bg);opacity:0.7;"':''}></div>
-        <div class="calc-field"><label>${t('gender')}</label><select name="gender" ${role==='resident'?'disabled':''}><option value="male" ${u.gender==='male'?'selected':''}>${t('male')}</option><option value="female" ${u.gender==='female'?'selected':''}>${t('female')}</option></select></div>
+        <div class="calc-field"><label>${t('gender')}</label><select name="gender"><option value="male" ${u.gender==='male'?'selected':''}>${t('male')}</option><option value="female" ${u.gender==='female'?'selected':''}>${t('female')}</option></select></div>
       </div>
       <div class="calc-row">
         <div class="calc-field"><label>${t('age')}</label><input name="age" type="number" value="${u.age}"></div>
@@ -211,8 +286,8 @@ async function changeResidentCredentials() {
   const updates = {};
   if (newUsername !== currentUser.name) {
     // Check if username already exists
-    const users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
-    if (users.find(u => u.name === newUsername && u.id !== currentUser.id)) {
+    const allUsers = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
+    if (allUsers.find(u => u.name === newUsername && u.id !== currentUser.id)) {
       msgEl.innerHTML = '<span style="color:var(--danger);">该用户名已被使用</span>'; return;
     }
     updates.name = newUsername;
@@ -220,7 +295,6 @@ async function changeResidentCredentials() {
   }
   if (newPwd) {
     const newHash = await sha256(newPwd);
-    updates.password_hash = newHash;
     currentUser.passwordHash = newHash;
   }
 
@@ -232,14 +306,14 @@ async function changeResidentCredentials() {
   }
 
   // Update local
-  const users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
-  const idx = users.findIndex(u => u.id === currentUser.id);
+  const users2 = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
+  const idx = users2.findIndex(u => u.id === currentUser.id);
   if (idx !== -1) {
-    if (updates.name) users[idx].name = updates.name;
-    if (updates.password_hash) users[idx].passwordHash = updates.password_hash;
-    localStorage.setItem('nutripro_users', JSON.stringify(users));
-    CloudSync.push('users', users);
-    window.users = users;
+    if (updates.name) users2[idx].name = updates.name;
+    if (updates.passwordHash) users2[idx].passwordHash = updates.passwordHash;
+    localStorage.setItem('nutripro_users', JSON.stringify(users2));
+    CloudSync.push('users', users2);
+    window.users = users2;
   }
   localStorage.setItem('nutripro_currentUser', JSON.stringify(currentUser));
 
@@ -257,142 +331,274 @@ async function changeResidentCredentials() {
   renderUserForm();
 }
 
-// ===== DIET LOG =====
-function renderDietPage() {
-  try {
-  allFoodsForDiet = FOOD_DB.map(function(f){ return {id:f.id, name:f.name, nameEn:f.nameEn||''}; });
-  updateDietDatePicker();
-  renderDietFoods();
-  } catch(e) { console.error('renderDietPage error:', e); }
+// ===== DIET LOG (with per-meal support) =====
+
+// Helper: ensure date data has meal structure
+function ensureMealStructure(dateData) {
+  if (!dateData) return { meals: { 'ungrouped': { name: '未分组', foods: [] } } };
+  if (dateData.meals) return dateData;
+  // Legacy flat array → wrap in ungrouped meal
+  return { meals: { 'ungrouped': { name: '未分组', foods: dateData } } };
 }
-function updateDietDatePicker() {
-  const container = document.getElementById('dietDateControls');
-  if (!container) return;
-  const dates = getAvailableDietDates();
-  const today = new Date().toISOString().split('T')[0];
-  let dateOptions = `<option value="${today}" ${selectedDietDate===today?'selected':''}>${t('today_label')} (${today})</option>`;
-  dates.forEach(d => {
-    if (d !== today) dateOptions += `<option value="${d}" ${selectedDietDate===d?'selected':''}>${d}</option>`;
+
+function getDayMeals(userId, dateStr) {
+  if (!userId || !dateStr) return null;
+  const dayData = allDietData[userId] && allDietData[userId][dateStr];
+  if (!dayData) return null;
+  return ensureMealStructure(dayData);
+}
+
+function getCurrentUserMeals(dateStr) {
+  if (!currentUser || !dateStr) return null;
+  return getDayMeals(currentUser.id, dateStr);
+}
+
+function getAllFlatFoods(dateStr) {
+  const meals = getCurrentUserMeals(dateStr);
+  if (!meals) return [];
+  let foods = [];
+  Object.values(meals.meals).forEach(function(m) {
+    foods = foods.concat(m.foods || []);
   });
-  container.innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-      <label style="font-size:13px;color:var(--text-muted);">${t('view_mode')}:</label>
-      <select id="dietViewModeSelect" onchange="changeDietViewMode(this.value)" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;font-size:13px;">
-        <option value="single" ${dietViewMode==='single'?'selected':''}>${t('single_day')}</option>
-        <option value="range" ${dietViewMode==='range'?'selected':''}>${t('multi_day_range')}</option>
-      </select>
-    </div>
-    <div id="dietSingleDate" style="display:${dietViewMode==='single'?'flex':'none'};align-items:center;gap:8px;margin-bottom:8px;">
-      <label style="font-size:13px;color:var(--text-muted);">${t('select_date')}:</label>
-      <input type="date" id="dietDatePicker" value="${selectedDietDate}" onchange="changeDietDate(this.value)" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;font-size:13px;">
-    </div>
-    <div id="dietRangeDate" style="display:${dietViewMode==='range'?'flex':'none'};align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-      <label style="font-size:13px;color:var(--text-muted);">${t('start_date')}:</label>
-      <input type="date" id="dietDateStart" value="${dietDateRange.start||today}" onchange="changeDietRange()" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;font-size:13px;">
-      <label style="font-size:13px;color:var(--text-muted);">${t('end_date')}:</label>
-      <input type="date" id="dietDateEnd" value="${dietDateRange.end||today}" onchange="changeDietRange()" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;font-size:13px;">
-    </div>
-    <div style="font-size:12px;color:var(--text-dim);">${t('diet_note_zh')}</div>
-  `;
+  return foods;
 }
-function changeDietViewMode(mode) {
-  dietViewMode = mode;
-  const single = document.getElementById('dietSingleDate');
-  const range = document.getElementById('dietRangeDate');
-  if (single) single.style.display = mode === 'single' ? 'flex' : 'none';
-  if (range) range.style.display = mode === 'range' ? 'flex' : 'none';
-  renderDietFoods();
+
+function saveDietData() {
+  // Normalize meal structure before saving
+  Object.keys(allDietData).forEach(function(uid) {
+    Object.keys(allDietData[uid]).forEach(function(date) {
+      if (!allDietData[uid][date].meals) {
+        allDietData[uid][date] = ensureMealStructure(allDietData[uid][date]);
+      }
+    });
+  });
+  localStorage.setItem('nutripro_allDietData', JSON.stringify(allDietData));
+  CloudSync.push('diet', allDietData);
 }
-function changeDietDate(date) {
-  selectedDietDate = date;
-  renderDietFoods();
-}
-function changeDietRange() {
-  const start = document.getElementById('dietDateStart')?.value;
-  const end = document.getElementById('dietDateEnd')?.value;
-  if (start && end) {
-    dietDateRange = { start: start, end: end };
-    renderDietFoods();
-  }
-}
-function addDietFood() {
-  if (!currentUser) { alert(currentLang==='zh'?'请先选择用户档案':'Please select a user profile first'); return; }
-  document.getElementById('addDietModal').classList.add('show');
-  // Initialize food search list
-  allFoodsForDiet = FOOD_DB.map(function(f){ return {id:f.id, name:f.name, nameEn:f.nameEn||''}; });
-}
-function closeAddDietModal() { document.getElementById('addDietModal').classList.remove('show'); }
-function confirmAddDietFood() {
-  if (!currentUser) { alert(currentLang==='zh'?'请先选择用户档案':'Please select a user profile first'); return; }
-  const id = document.getElementById('dietFoodSelect').value;
-  const amount = parseFloat(document.getElementById('dietFoodAmount').value) || 100;
-  if (!id) { alert(currentLang==='zh'?'请选择食物':'Please select a food'); return; }
-  if (!allDietData[currentUser.id]) allDietData[currentUser.id] = {};
-  if (!allDietData[currentUser.id][selectedDietDate]) allDietData[currentUser.id][selectedDietDate] = [];
-  allDietData[currentUser.id][selectedDietDate].push({foodId:id, amount:amount});
-  saveDietData();
-  closeAddDietModal();
-  renderDietFoods();
-}
-function renderDietFoods() {
-  try {
-  const el = document.getElementById('dietFoodList');
-  if(!el) return;
-  const dietFoods = getDietFoodsForSelectedDates();
-  if(dietFoods.length===0) { el.innerHTML=`<p style="color:var(--text-muted);">${t('no_diet_entries')}</p>`; return; }
-  const isRange = dietViewMode === 'range';
-  // group by date for range view
-  let html = '';
-  if (isRange) {
+
+function getDietFoodsForSelectedDates() {
+  if (!currentUser) return [];
+  if (dietViewMode === 'single') {
+    return getAllFlatFoods(selectedDietDate);
+  } else {
+    let merged = [];
     let d = new Date(dietDateRange.start);
     let end = new Date(dietDateRange.end);
     while (d <= end) {
       let ds = d.toISOString().split('T')[0];
-      let dayFoods = getCurrentUserDiet(ds);
-      if (dayFoods.length > 0) {
+      merged = merged.concat(getAllFlatFoods(ds));
+      d.setDate(d.getDate() + 1);
+    }
+    return merged;
+  }
+}
+
+function getAvailableDietDates() {
+  if (!currentUser || !allDietData[currentUser.id]) return [];
+  return Object.keys(allDietData[currentUser.id]).sort().reverse();
+}
+
+// ===== MEAL MANAGEMENT =====
+function createMeal(dateStr, mealName) {
+  if (!currentUser || !dateStr) return null;
+  if (!allDietData[currentUser.id]) allDietData[currentUser.id] = {};
+  if (!allDietData[currentUser.id][dateStr]) allDietData[currentUser.id][dateStr] = { meals: {} };
+  const meals = ensureMealStructure(allDietData[currentUser.id][dateStr]);
+  const mealId = 'meal_' + Date.now().toString(36);
+  meals.meals[mealId] = { name: mealName || '新餐次', foods: [] };
+  allDietData[currentUser.id][dateStr] = meals;
+  saveDietData();
+  renderDietFoods();
+  return mealId;
+}
+
+function deleteMeal(dateStr, mealId) {
+  if (!currentUser) return;
+  const meals = getCurrentUserMeals(dateStr);
+  if (!meals || !meals.meals[mealId]) return;
+  delete meals.meals[mealId];
+  saveDietData();
+  renderDietFoods();
+}
+
+function renameMeal(dateStr, mealId, newName) {
+  if (!currentUser) return;
+  const meals = getCurrentUserMeals(dateStr);
+  if (!meals || !meals.meals[mealId]) return;
+  meals.meals[mealId].name = newName;
+  saveDietData();
+  renderDietFoods();
+}
+
+function addFoodToMeal(dateStr, mealId, foodEntry) {
+  if (!currentUser) return;
+  if (!allDietData[currentUser.id]) allDietData[currentUser.id] = {};
+  if (!allDietData[currentUser.id][dateStr]) allDietData[currentUser.id][dateStr] = { meals: {} };
+  const meals = ensureMealStructure(allDietData[currentUser.id][dateStr]);
+  if (!meals.meals[mealId]) return;
+  meals.meals[mealId].foods.push(foodEntry);
+  allDietData[currentUser.id][dateStr] = meals;
+  saveDietData();
+  renderDietFoods();
+}
+
+function removeFoodFromMeal(dateStr, mealId, foodIndex) {
+  if (!currentUser) return;
+  const meals = getCurrentUserMeals(dateStr);
+  if (!meals || !meals.meals[mealId] || !meals.meals[mealId].foods[foodIndex]) return;
+  meals.meals[mealId].foods.splice(foodIndex, 1);
+  saveDietData();
+  renderDietFoods();
+}
+
+function copyDietFood(mealId, foodIndex) {
+  const meals = getCurrentUserMeals(selectedDietDate);
+  if (!meals || !meals.meals[mealId] || !meals.meals[mealId].foods[foodIndex]) return;
+  dietClipboard = { type: 'food', mealId: mealId, foodIndex: foodIndex, foodEntry: meals.meals[mealId].foods[foodIndex] };
+  alert(currentLang === 'zh' ? '已复制到剪贴板' : 'Copied to clipboard');
+}
+
+function copyMealFoods(mealId) {
+  const meals = getCurrentUserMeals(selectedDietDate);
+  if (!meals || !meals.meals[mealId]) return;
+  dietClipboard = { type: 'meal', mealId: mealId, foods: [].concat(meals.meals[mealId].foods || []) };
+  alert(currentLang === 'zh' ? '整餐已复制到剪贴板' : 'Entire meal copied to clipboard');
+}
+
+function pasteToCurrentMeal(targetMealId) {
+  if (!dietClipboard || !currentUser) return;
+  const meals = getCurrentUserMeals(selectedDietDate);
+  if (!meals || !meals.meals[targetMealId]) return;
+
+  if (dietClipboard.type === 'food') {
+    meals.meals[targetMealId].foods.push(JSON.parse(JSON.stringify(dietClipboard.foodEntry)));
+  } else if (dietClipboard.type === 'meal') {
+    dietClipboard.foods.forEach(function(f) {
+      meals.meals[targetMealId].foods.push(JSON.parse(JSON.stringify(f)));
+    });
+  }
+  allDietData[currentUser.id][selectedDietDate] = meals;
+  saveDietData();
+  renderDietFoods();
+  dietClipboard = null;
+}
+
+function pasteToNewMeal() {
+  if (!dietClipboard || !currentUser) return;
+  if (!allDietData[currentUser.id]) allDietData[currentUser.id] = {};
+  if (!allDietData[currentUser.id][selectedDietDate]) allDietData[currentUser.id][selectedDietDate] = { meals: {} };
+  const meals = ensureMealStructure(allDietData[currentUser.id][selectedDietDate]);
+
+  const mealId = 'meal_' + Date.now().toString(36);
+  const mealName = currentLang === 'zh' ? '新餐次' : 'New Meal';
+  meals.meals[mealId] = { name: mealName, foods: [] };
+
+  if (dietClipboard.type === 'food') {
+    meals.meals[mealId].foods.push(JSON.parse(JSON.stringify(dietClipboard.foodEntry)));
+  } else if (dietClipboard.type === 'meal') {
+    dietClipboard.foods.forEach(function(f) {
+      meals.meals[mealId].foods.push(JSON.parse(JSON.stringify(f)));
+    });
+  }
+  allDietData[currentUser.id][selectedDietDate] = meals;
+  saveDietData();
+  renderDietFoods();
+  dietClipboard = null;
+}
+
+function renderDietFoods() {
+  try {
+  const el = document.getElementById('dietFoodList');
+  if(!el) return;
+  const isRange = dietViewMode === 'range';
+  if (isRange) {
+    // Range view: show meals per day
+    let html = '';
+    let d = new Date(dietDateRange.start);
+    let end = new Date(dietDateRange.end);
+    while (d <= end) {
+      let ds = d.toISOString().split('T')[0];
+      const meals = getCurrentUserMeals(ds);
+      if (meals && Object.keys(meals.meals).length > 0) {
         html += `<div style="margin-top:12px;padding:8px 0;border-top:2px solid var(--accent);"><strong style="color:var(--accent-light);">${ds}</strong></div>`;
-        dayFoods.forEach((item, idx) => {
-          const f = FOOD_DB.find(x=>x.id===item.foodId);
-          if(!f) return;
-          const cal = Math.round(parseFloat(f.energyKCal||0)*item.amount/100);
-          // find global index for removal
-          const gIdx = allDietData[currentUser.id][ds].indexOf(item);
-          html += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);">
-            <span style="flex:1;">${f.name}</span>
-            <span style="color:var(--text-muted);">${item.amount}g</span>
-            <span style="color:var(--accent-light);font-weight:600;">${cal} kcal</span>
-            <button class="btn-action" style="padding:2px 8px;font-size:11px;" onclick="removeDietFood('${ds}',${gIdx})">✕</button>
-          </div>`;
+        Object.keys(meals.meals).forEach(function(mid) {
+          const meal = meals.meals[mid];
+          meal.foods.forEach(function(item, idx) {
+            const f = FOOD_DB.find(function(x){ return x.id === item.foodId; });
+            if(!f) return;
+            const cal = Math.round(parseFloat(f.energyKCal||0)*item.amount/100);
+            const prot = (parseFloat(f.protein||0)*item.amount/100).toFixed(1);
+            const fat = (parseFloat(f.fat||0)*item.amount/100).toFixed(1);
+            const cho = (parseFloat(f.CHO||0)*item.amount/100).toFixed(1);
+            html += `<div style="display:flex;align-items:center;gap:8px;padding:4px 0 4px 16px;border-bottom:1px solid var(--border);font-size:13px;">
+              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(f.name)}</span>
+              <span style="color:var(--text-muted);min-width:30px;">${prot}g</span>
+              <span style="color:var(--text-muted);min-width:30px;">${fat}g</span>
+              <span style="color:var(--text-muted);min-width:30px;">${cho}g</span>
+              <span style="color:var(--accent-light);font-weight:600;min-width:55px;">${formatEnergy(cal)}</span>
+              <span style="color:var(--text-muted);min-width:35px;">${item.amount}g</span>
+              <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="copyDietFood('${mid}',${idx})" title="复制">📋</button>
+              <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="removeFoodFromMeal('${ds}','${mid}',${idx})">✕</button>
+            </div>`;
+          });
         });
       }
       d.setDate(d.getDate() + 1);
     }
+    if (!html) { el.innerHTML = `<p style="color:var(--text-muted);">${t('no_diet_entries')}</p>`; return; }
+    el.innerHTML = html;
   } else {
-    html = dietFoods.map((d,i) => {
-      const f = FOOD_DB.find(x=>x.id===d.foodId);
-      if(!f) return '';
-      const cal = Math.round(parseFloat(f.energyKCal||0)*d.amount/100);
-      return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);">
-        <span style="flex:1;">${f.name}</span>
-        <span style="color:var(--text-muted);">${d.amount}g</span>
-        <span style="color:var(--accent-light);font-weight:600;">${cal} kcal</span>
-        <button class="btn-action" style="padding:2px 8px;font-size:11px;" onclick="removeDietFood('${selectedDietDate}',${i})">✕</button>
-      </div>`;
-    }).join('');
-  }
-  el.innerHTML = html;
-  } catch(e) { console.error('renderDietFoods error:', e); }
-}
-function removeDietFood(dateStr, idx) {
-  if (!currentUser) return;
-  if (allDietData[currentUser.id] && allDietData[currentUser.id][dateStr]) {
-    allDietData[currentUser.id][dateStr].splice(idx, 1);
-    if (allDietData[currentUser.id][dateStr].length === 0) {
-      delete allDietData[currentUser.id][dateStr];
+    // Single day view: show per-meal sections
+    const meals = getCurrentUserMeals(selectedDietDate);
+    if (!meals || Object.keys(meals.meals).length === 0) {
+      el.innerHTML = `<p style="color:var(--text-muted);">${t('no_diet_entries')}</p>`;
+      return;
     }
-    saveDietData();
-    renderDietFoods();
+    let html = '';
+    Object.keys(meals.meals).forEach(function(mid) {
+      const meal = meals.meals[mid];
+      html += `<div style="margin-top:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
+          <strong style="color:var(--accent-light);font-size:14px;">🍽 ${escapeHtml(meal.name)}</strong>
+          <div style="display:flex;gap:4px;">
+            <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="copyMealFoods('${mid}')" title="复制整餐">📋</button>
+            <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="deleteMeal('${selectedDietDate}','${mid}')" title="删除餐次">✕</button>
+          </div>
+        </div>`;
+      meal.foods.forEach(function(item, idx) {
+        const f = FOOD_DB.find(function(x){ return x.id === item.foodId; });
+        if(!f) return;
+        const cal = Math.round(parseFloat(f.energyKCal||0)*item.amount/100);
+        const prot = (parseFloat(f.protein||0)*item.amount/100).toFixed(1);
+        const fat = (parseFloat(f.fat||0)*item.amount/100).toFixed(1);
+        const cho = (parseFloat(f.CHO||0)*item.amount/100).toFixed(1);
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:4px 0 4px 16px;border-bottom:1px solid var(--border);font-size:13px;">
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(f.name)}</span>
+          <span style="color:var(--text-muted);min-width:30px;">${prot}g</span>
+          <span style="color:var(--text-muted);min-width:30px;">${fat}g</span>
+          <span style="color:var(--text-muted);min-width:30px;">${cho}g</span>
+          <span style="color:var(--accent-light);font-weight:600;min-width:55px;">${formatEnergy(cal)}</span>
+          <span style="color:var(--text-muted);min-width:35px;">${item.amount}g</span>
+          <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="copyDietFood('${mid}',${idx})" title="复制">📋</button>
+          <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="removeFoodFromMeal('${selectedDietDate}','${mid}',${idx})">✕</button>
+        </div>`;
+      });
+      // Meal subtotal
+      const mealCal = meal.foods.reduce(function(s, item) {
+        const f = FOOD_DB.find(function(x){ return x.id === item.foodId; });
+        return s + (f ? parseFloat(f.energyKCal||0)*item.amount/100 : 0);
+      }, 0);
+      html += `<div style="padding:4px 16px;font-size:12px;color:var(--text-muted);text-align:right;">小计: ${formatEnergy(Math.round(mealCal))}</div>`;
+      html += `</div>`;
+    });
+    el.innerHTML = html;
   }
+  } catch(e) { console.error('renderDietFoods error:', e); }
+  // Show/hide paste buttons based on clipboard state
+  const pasteBtn = document.getElementById('pasteBtn');
+  const pasteNewBtn = document.getElementById('pasteNewBtn');
+  if (pasteBtn) pasteBtn.style.display = dietClipboard ? '' : 'none';
+  if (pasteNewBtn) pasteNewBtn.style.display = dietClipboard ? '' : 'none';
 }
 
 function generateDietSummary() {
@@ -414,6 +620,14 @@ function generateDietSummary() {
     const f = FOOD_DB.find(x=>x.id===d.foodId);
     return s + (f ? parseFloat(f.fat||0)*d.amount/100 : 0);
   }, 0);
+
+  // Add supplement macros (v1.2)
+  const dateStr = dietViewMode === 'range' ? dietDateRange.end : selectedDietDate;
+  const suppMacros = getDailySupplementMacros(dateStr);
+  totalP += suppMacros.protein;
+  totalC += suppMacros.carbs;
+  totalF += suppMacros.fat;
+  totalCal += suppMacros.calories;
   // Calculate macro ratios by calories
   const pCal = totalP * 4;
   const cCal = totalC * 4;
@@ -430,7 +644,7 @@ function generateDietSummary() {
 
   document.getElementById('dietSummary').innerHTML = `<div class="calc-card">
     <h3>${periodText}</h3>
-    <div class="result-item"><span class="result-label">${t('total_calories')}</span><span class="result-value">${Math.round(totalCal)} <span class="unit">kcal</span></span></div>
+    <div class="result-item"><span class="result-label">${t('total_calories')}</span><span class="result-value">${formatEnergy(totalCal)}</span></div>
     <div class="result-item"><span class="result-label">${t('protein_diet')}</span><span class="result-value">${totalP.toFixed(1)} <span class="unit">g</span></span></div>
     <div class="result-item"><span class="result-label">${t('carbs_diet')}</span><span class="result-value">${totalC.toFixed(1)} <span class="unit">g</span></span></div>
     <div class="result-item"><span class="result-label">${t('fat_diet')}</span><span class="result-value">${totalF.toFixed(1)} <span class="unit">g</span></span></div>

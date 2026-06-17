@@ -166,14 +166,14 @@ function calcTDEE() {
   const tdee = Math.round(bmr * act);
   document.getElementById('tdee_result').innerHTML = `<div class="calc-result">
     <h4>${t('calc_results')}</h4>
-    <div class="result-item"><span class="result-label">BMR (Mifflin)</span><span class="result-value">${Math.round(bmr_mifflin)} <span class="unit">kcal</span></span></div>
-    ${bf>0?`<div class="result-item"><span class="result-label">BMR (Katch-McArdle)</span><span class="result-value">${Math.round(bmr_katch)} <span class="unit">kcal</span></span></div>`:''}
-    <div class="result-item"><span class="result-label">BMR ${t('combined')}</span><span class="result-value">${bmr} <span class="unit">kcal</span></span></div>
-    <div class="result-item"><span class="result-label">TDEE</span><span class="result-value">${tdee} <span class="unit">kcal</span></span></div>
+    <div class="result-item"><span class="result-label">BMR (Mifflin)</span><span class="result-value">${formatEnergy(Math.round(bmr_mifflin))}</span></div>
+    ${bf>0?`<div class="result-item"><span class="result-label">BMR (Katch-McArdle)</span><span class="result-value">${formatEnergy(Math.round(bmr_katch))}</span></div>`:''}
+    <div class="result-item"><span class="result-label">BMR ${t('combined')}</span><span class="result-value">${formatEnergy(bmr)}</span></div>
+    <div class="result-item"><span class="result-label">TDEE</span><span class="result-value">${formatEnergy(tdee)}</span></div>
     <hr style="border-color:var(--border);margin:8px 0;">
-    <div class="result-item"><span class="result-label">🎯 ${t('cut_label')} (-20%)</span><span class="result-value" style="color:var(--success);">${Math.round(tdee*0.8)} <span class="unit">kcal</span></span></div>
-    <div class="result-item"><span class="result-label">➡️ ${t('maintain_label')}</span><span class="result-value">${tdee} <span class="unit">kcal</span></span></div>
-    <div class="result-item"><span class="result-label">💪 ${t('bulk_label')} (+15%)</span><span class="result-value" style="color:var(--accent-light);">${Math.round(tdee*1.15)} <span class="unit">kcal</span></span></div>
+    <div class="result-item"><span class="result-label">🎯 ${t('cut_label')} (-20%)</span><span class="result-value" style="color:var(--success);">${formatEnergy(Math.round(tdee*0.8))}</span></div>
+    <div class="result-item"><span class="result-label">➡️ ${t('maintain_label')}</span><span class="result-value">${formatEnergy(tdee)}</span></div>
+    <div class="result-item"><span class="result-label">💪 ${t('bulk_label')} (+15%)</span><span class="result-value" style="color:var(--accent-light);">${formatEnergy(Math.round(tdee*1.15))}</span></div>
   </div>`;
 }
 
@@ -187,10 +187,10 @@ function calcBMR() {
   const cun = bf>0 ? 500+22*lbm : null;
   document.getElementById('bmr_result').innerHTML = `<div class="calc-result">
     <h4>${t('bmr_comparison')}</h4>
-    <div class="result-item"><span class="result-label">Mifflin-St Jeor ${t('recommended')}</span><span class="result-value">${Math.round(mifflin)} <span class="unit">kcal</span></span></div>
-    <div class="result-item"><span class="result-label">Harris-Benedict (1984)</span><span class="result-value">${Math.round(harris)} <span class="unit">kcal</span></span></div>
-    ${katch!==null?`<div class="result-item"><span class="result-label">Katch-McArdle ${t('bf_known')}</span><span class="result-value">${Math.round(katch)} <span class="unit">kcal</span></span></div>`:''}
-    ${cun!==null?`<div class="result-item"><span class="result-label">Cunningham ${t('athletes')}</span><span class="result-value">${Math.round(cun)} <span class="unit">kcal</span></span></div>`:''}
+    <div class="result-item"><span class="result-label">Mifflin-St Jeor ${t('recommended')}</span><span class="result-value">${formatEnergy(Math.round(mifflin))}</span></div>
+    <div class="result-item"><span class="result-label">Harris-Benedict (1984)</span><span class="result-value">${formatEnergy(Math.round(harris))}</span></div>
+    ${katch!==null?`<div class="result-item"><span class="result-label">Katch-McArdle ${t('bf_known')}</span><span class="result-value">${formatEnergy(Math.round(katch))}</span></div>`:''}
+    ${cun!==null?`<div class="result-item"><span class="result-label">Cunningham ${t('athletes')}</span><span class="result-value">${formatEnergy(Math.round(cun))}</span></div>`:''}
     <div class="chart-container" style="max-width:500px;margin-top:12px;"><canvas id="bmrChart"></canvas></div>
   </div>`;
   setTimeout(()=>{
@@ -231,8 +231,8 @@ function calcDeficit() {
   document.getElementById('deficit_result').innerHTML = `<div class="calc-result">
     <h4>${t('deficit_results')}</h4>
     <div class="result-item"><span class="result-label">${t('target_loss_short')}</span><span class="result-value">${target} <span class="unit">kg</span></span></div>
-    <div class="result-item"><span class="result-label">${t('total_deficit')}</span><span class="result-value">${totalKcal.toLocaleString()} <span class="unit">kcal</span></span></div>
-    <div class="result-item"><span class="result-label">${t('daily_deficit_short')}</span><span class="result-value">${daily} <span class="unit">kcal/天</span></span></div>
+    <div class="result-item"><span class="result-label">${t('total_deficit')}</span><span class="result-value">${formatEnergy(totalKcal)}</span></div>
+    <div class="result-item"><span class="result-label">${t('daily_deficit_short')}</span><span class="result-value">${formatEnergy(daily)}</span></div>
     <div class="result-item"><span class="result-label">${t('days_needed')}</span><span class="result-value" style="color:var(--success);">${days} <span class="unit">${t('day_unit')} (${weeks} ${t('week_unit')})</span></span></div>
   </div>`;
 }
@@ -244,7 +244,7 @@ function calcMenstrual() {
   document.getElementById('menstrual_result').innerHTML = `<div class="calc-result">
     <h4>${t('menstrual_results')}</h4>
     <div class="result-item"><span class="result-label">${t('lbm')}</span><span class="result-value">${lbm.toFixed(1)} <span class="unit">kg</span></span></div>
-    <div class="result-item"><span class="result-label">${t('min_safe_cal')}</span><span class="result-value" style="color:${safeLine>0?'var(--danger)':'var(--text)'};">${safeLine} <span class="unit">kcal/天</span></span></div>
+    <div class="result-item"><span class="result-label">${t('min_safe_cal')}</span><span class="result-value" style="color:${safeLine>0?'var(--danger)':'var(--text)'};">${formatEnergy(safeLine)}</span></div>
     <p style="color:var(--text-muted);font-size:13px;margin-top:8px;">⚠️ ${t('menstrual_warning')}</p>
   </div>`;
 }
@@ -279,10 +279,10 @@ function calcTEF() {
   const totalCal = p*4 + c*4 + f*9;
   document.getElementById('tef_result').innerHTML = `<div class="calc-result">
     <h4>${t('tef_results')}</h4>
-    <div class="result-item"><span class="result-label">${t('protein_tef')}</span><span class="result-value">${Math.round(p*4*0.25)} <span class="unit">kcal</span></span></div>
-    <div class="result-item"><span class="result-label">${t('carbs_tef')}</span><span class="result-value">${Math.round(c*4*0.075)} <span class="unit">kcal</span></span></div>
-    <div class="result-item"><span class="result-label">${t('fat_tef')}</span><span class="result-value">${Math.round(f*9*0.025)} <span class="unit">kcal</span></span></div>
-    <div class="result-item"><span class="result-label">${t('total_tef')}</span><span class="result-value">${tef} <span class="unit">kcal</span></span></div>
+    <div class="result-item"><span class="result-label">${t('protein_tef')}</span><span class="result-value">${formatEnergy(Math.round(p*4*0.25))}</span></div>
+    <div class="result-item"><span class="result-label">${t('carbs_tef')}</span><span class="result-value">${formatEnergy(Math.round(c*4*0.075))}</span></div>
+    <div class="result-item"><span class="result-label">${t('fat_tef')}</span><span class="result-value">${formatEnergy(Math.round(f*9*0.025))}</span></div>
+    <div class="result-item"><span class="result-label">${t('total_tef')}</span><span class="result-value">${formatEnergy(tef)}</span></div>
     <div class="result-item"><span class="result-label">${t('tef_pct')}</span><span class="result-value">${(tef/totalCal*100).toFixed(1)} <span class="unit">%</span></span></div>
   </div>`;
 }

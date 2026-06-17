@@ -97,7 +97,16 @@ const CloudSync = {
               localStorage.setItem('nutripro_auth', JSON.stringify(cloudData));
               break;
             case 'users':
-              localStorage.setItem('nutripro_users', JSON.stringify(cloudData));
+              // Normalize snake_case (from Supabase DB) to camelCase (app format)
+              const normalizedUsers = cloudData.map(function(u) {
+                return {
+                  ...u,
+                  passwordHash: u.password_hash || u.passwordHash,
+                  trainingYears: u.training_years || u.trainingYears,
+                  grantedPermissions: u.granted_permissions || u.grantedPermissions
+                };
+              });
+              localStorage.setItem('nutripro_users', JSON.stringify(normalizedUsers));
               break;
             case 'diet':
               localStorage.setItem('nutripro_allDietData', JSON.stringify(cloudData));
@@ -161,8 +170,17 @@ const CloudSync = {
               } catch(e) { console.error('Auth sync error:', e); }
               break;
             case 'users':
-              localStorage.setItem('nutripro_users', JSON.stringify(cloudData));
-              users = cloudData;
+              // Normalize snake_case → camelCase
+              const normUsers = cloudData.map(function(u) {
+                return {
+                  ...u,
+                  passwordHash: u.password_hash || u.passwordHash,
+                  trainingYears: u.training_years || u.trainingYears,
+                  grantedPermissions: u.granted_permissions || u.grantedPermissions
+                };
+              });
+              localStorage.setItem('nutripro_users', JSON.stringify(normUsers));
+              users = normUsers;
               if (currentUser) {
                 currentUser = users.find(u => u.id === currentUser.id) || currentUser;
                 localStorage.setItem('nutripro_currentUser', JSON.stringify(currentUser));

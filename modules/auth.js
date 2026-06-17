@@ -72,7 +72,7 @@ async function loginWithApprovedCredentials(username, password) {
   }
   // Fallback: local login
   const users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
-  const user = users.find(u => u.name === username && u.passwordHash === hash);
+  const user = users.find(u => u.name === username && (u.passwordHash || u.password_hash) === hash);
   if (user) {
     const auth = getAuthData();
     const days = auth.sessionDays !== undefined ? auth.sessionDays : CONFIG.DEFAULT_SESSION_DAYS;
@@ -305,7 +305,7 @@ async function loginAsResident() {
   const users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
   const user = users.find(u => u.name === name && u.role === 'resident');
   if (!user) { errEl.textContent = '用户名不存在或非常驻用户'; return; }
-  if (hash !== user.passwordHash) { errEl.textContent = '密码错误'; return; }
+  if (hash !== (user.passwordHash || user.password_hash)) { errEl.textContent = '密码错误'; return; }
   const auth = getAuthData();
   const days = auth.sessionDays !== undefined ? auth.sessionDays : CONFIG.DEFAULT_SESSION_DAYS;
   const expiresAt = days > 0 ? Date.now() + days * 86400000 : 0;
