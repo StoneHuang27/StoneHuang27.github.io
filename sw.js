@@ -4,7 +4,7 @@
 // Purpose: Offline support via cache-first strategy
 // ============================================================
 
-const CACHE_NAME = 'nutripro-v3';
+const CACHE_NAME = 'nutripro-v4';
 const RUNTIME_CACHE = 'nutripro-runtime-v1';
 
 // Static assets to cache on install
@@ -12,10 +12,10 @@ const STATIC_ASSETS = [
   '/',
   'index.html',
   'styles.css',
-  'food_db.json',
   'modules/config.js',
   'modules/utils.js',
   'modules/state.js',
+  'modules/db-compress.js',
   'modules/cloud-sync.js',
   'modules/auth.js',
   'modules/admin.js',
@@ -28,6 +28,8 @@ const STATIC_ASSETS = [
   'modules/diet.js',
   'modules/advice.js',
   'modules/app.js',
+  'modules/health.js',
+  'modules/supplements.js',
 ];
 
 // CDN resources to cache
@@ -63,7 +65,7 @@ self.addEventListener('activate', (event) => {
   return self.clients.claim();
 });
 
-// Fetch: cache-first for static assets, network-first for API/runtime data
+// Fetch: cache-first for static assets, network-first for HTML and API data
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -77,7 +79,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for static assets (HTML, CSS, JS, JSON, images)
+  // HTML files: network-first (always try to get the latest)
+  if (request.destination === 'document') {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  // Cache-first for other static assets (CSS, JS, images, fonts)
   event.respondWith(cacheFirst(request));
 });
 
