@@ -164,6 +164,7 @@ function submitFoodEdit() {
       editorId: currentSession ? currentSession.userId : 'admin'
     });
     localStorage.setItem('nutripro_userFoods', JSON.stringify(userFoods));
+    CloudSync.push('userFoods', userFoods);
     closeFoodEditModal();
     closeModal();
     renderFoodSidebar();
@@ -231,7 +232,8 @@ function approveFoodEditApp(appId) {
     });
   }
   localStorage.setItem('nutripro_userFoods', JSON.stringify(userFoods));
-  
+  CloudSync.push('userFoods', userFoods);
+
   renderFoodSidebar();
   renderFoodGrid();
   renderAdminSidebar();
@@ -273,6 +275,7 @@ function approveAllFoodEditApps() {
 
   saveAuthData(auth);
   localStorage.setItem('nutripro_userFoods', JSON.stringify(userFoods));
+  CloudSync.push('userFoods', userFoods);
   renderFoodSidebar();
   renderFoodGrid();
   renderAdminSidebar();

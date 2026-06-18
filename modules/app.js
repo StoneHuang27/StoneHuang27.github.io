@@ -10,7 +10,7 @@ function showSettings() {
 }
 function closeSettings() { document.getElementById('settingsModal').classList.remove('show'); }
 function saveSettings() {
-  siteName = document.getElementById('settingSiteName').value || 'NutriPro 运动营养数据平台';
+  siteName = document.getElementById('settingSiteName').value || 'NutriPro v1.4 运动营养数据平台';
   localStorage.setItem('nutripro_siteName', siteName);
   applySiteName();
   // Save energy unit preference
@@ -23,8 +23,8 @@ function saveSettings() {
 }
 function applySiteName() {
   var el = document.getElementById('siteNameSpan');
-  if (el) el.textContent = siteName || 'NutriPro 运动营养数据平台';
-  document.title = (siteName || 'NutriPro 运动营养数据平台') + t('title_suffix');
+  if (el) el.textContent = siteName || 'NutriPro v1.4 运动营养数据平台';
+  document.title = (siteName || 'NutriPro v1.4 运动营养数据平台') + t('title_suffix');
 }
 function toggleFilter(type) {
   if (type === 'fodmap') {
@@ -118,34 +118,35 @@ function init() {
     }
   } catch(e) { console.warn('Diet migration error:', e); }
 
-  // Load food database (async)
-  loadFoodDB().then(() => {
+  // Load food database from embedded compressed data (async, no fetch needed)
+  initEmbeddedDB().then(() => {
     renderFoodSidebar();
     renderFoodGrid();
     allFoodsForDiet = FOOD_DB.map(function(f){ return {id:f.id, name:f.name, nameEn:f.nameEn||''}; });
-  }).catch(() => {
-    // If food_db.json fails to load, show a message
-    document.getElementById('foodGrid').innerHTML = '<div class="empty-state"><div class="icon">⚠️</div>食物数据库加载失败，请检查网络连接</div>';
+  }).catch((err) => {
+    const gridEl = document.getElementById('foodGrid');
+    if (gridEl) {
+      gridEl.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div>' +
+        '食物数据库初始化失败，请刷新页面重试</div>';
+    }
+    console.error('Food DB init failed:', err);
   });
 
-  // Initialize Firebase cloud sync (async)
+  // Initialize cloud sync (async)
   initCloudSync();
 
   // Check session
   if (checkSession()) {
-    // Valid session, enter app directly
     document.getElementById('authOverlay').classList.add('hidden');
   } else {
-    // No valid session, show login
     document.getElementById('authOverlay').classList.remove('hidden');
   }
 
-  // Check if FOOD_DB is populated (data injected below)
+  // Show loading state while food_db.json is being fetched
   if(FOOD_DB.length === 0) {
-    document.getElementById('foodGrid').innerHTML = '<div class="empty-state"><div class="icon">🔄</div>'+t('loading')+'</div>';
+    const gridEl = document.getElementById('foodGrid');
+    if (gridEl) gridEl.innerHTML = '<div class="loading"><div class="spinner"></div><br><span data-i18n="loading">加载中...</span></div>';
   }
-  renderFoodSidebar();
-  renderFoodGrid();
   applyI18n();
   document.getElementById('langBtn').textContent = currentLang === 'zh' ? 'EN' : '中文';
   // Search
@@ -180,6 +181,9 @@ function init() {
   // Initialize health dashboard and supplement tracker
   if (currentUser && hasPermission('diet')) {
     renderHealthDashboard();
+  }
+  // Render supplement tracker on food page (available to all logged-in users)
+  if (currentUser) {
     renderSupplementTracker();
   }
 }

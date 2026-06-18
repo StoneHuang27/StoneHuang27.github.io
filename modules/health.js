@@ -93,6 +93,13 @@ function calculateTrend(metric, period) {
   return results;
 }
 
+// ===== HEALTH DATE CHANGE =====
+
+function onHealthDateChange(dateStr) {
+  selectedDietDate = dateStr;
+  renderHealthDashboard();
+}
+
 // ===== RENDER HEALTH DASHBOARD =====
 function renderHealthDashboard() {
   const container = document.getElementById('healthDashboard');
@@ -108,7 +115,11 @@ function renderHealthDashboard() {
   // Water
   const wt = record.water || {};
 
-  container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+  container.innerHTML = `<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+      <label style="font-size:13px;color:var(--text-muted);">查看日期：</label>
+      <input type="date" id="healthDatePicker" value="${dateStr}" onchange="onHealthDateChange(this.value)" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;font-size:13px;">
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
     <!-- Training Card -->
     <div class="calc-card">
       <h4>🏋️ 训练记录</h4>
@@ -168,6 +179,7 @@ function renderHealthDashboard() {
       </div>
       <canvas id="trendChart" width="300" height="150"></canvas>
     </div>
+  </div>
   </div>
   <button class="btn-primary" onclick="saveHealthRecord('${dateStr}')" style="margin-top:12px;">💾 保存健康数据</button>
   `;

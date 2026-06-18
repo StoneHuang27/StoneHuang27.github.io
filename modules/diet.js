@@ -58,25 +58,29 @@ function saveUsers() {
   CloudSync.push('users', normalized);
 }
 function addUser() {
+  if (!currentUser) { alert('请先选择一个用户'); return; }
+  // Only admin can create new users
+  if (getCurrentRole() !== 'admin') { alert('只有管理员可以新建用户'); return; }
   const user = {
-    id: Date.now().toString(),
+    id: 'usr_' + Date.now().toString(36),
     name: '新用户', gender: 'male', age: 25, height: 170, weight: 65,
     bodyfat: 15, activity: 'moderate', trainingYears: 1, goal: 'maintain',
     role: 'resident', passwordHash: '', grantedPermissions: [], createdAt: Date.now()
   };
   users.push(user);
-  currentUser = user;
   saveUsers();
-  renderUsers();
+  // Stay as current user (don't switch to new user)
+  renderUsers('', 'all');
+  // Refresh the form area for the current user
   renderUserForm();
 }
 function selectUser(id) {
   currentUser = users.find(u => u.id === id) || null;
   saveUsers();
-  renderUsers();
+  renderUsers('', 'all');
   renderUserForm();
   // Refresh diet page for new user
-  renderDietPage();
+  if (typeof renderDietPage === 'function') renderDietPage();
 }
 function deleteUser(id) {
   const user = users.find(u => u.id === id);
@@ -89,9 +93,9 @@ function deleteUser(id) {
   users = users.filter(u => u.id !== id);
   if (currentUser && currentUser.id === id) currentUser = users[0] || null;
   saveUsers();
-  renderUsers();
+  renderUsers('', 'all');
   renderUserForm();
-  renderDietPage();
+  if (typeof renderDietPage === 'function') renderDietPage();
 }
 function saveUserForm() {
   if (!currentUser) return;
@@ -107,29 +111,60 @@ function saveUserForm() {
   currentUser.trainingYears = parseFloat(f.querySelector('[name="trainingYears"]').value) || 1;
   currentUser.goal = f.querySelector('[name="goal"]').value;
   saveUsers();
-  renderUsers();
+  renderUsers('', 'all');
 }
 function renderUsers(filter, roleFilter) {
   try {
-  const el = document.getElementById('userList');
-  if (!el) return;
   const isAdmin = getCurrentRole() === 'admin';
-  // Add search/filter controls for admin
-  let controlsHtml = '';
-  if (isAdmin) {
-    controlsHtml = `<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-      <input type="text" id="userSearch" placeholder="搜索用户名..." oninput="renderUsers(this.value, document.getElementById('userRoleFilter')?.value)" style="flex:1;min-width:150px;background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:13px;">
-      <select id="userRoleFilter" onchange="renderUsers(document.getElementById('userSearch')?.value, this.value)" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:13px;">
-        <option value="all">全部角色</option>
-        <option value="admin">管理员</option>
-        <option value="resident">常驻</option>
-        <option value="guest">普通</option>
-      </select>
-    </div>`;
-  }
-  // Prepend controls to the container
   const container = document.getElementById('userListContainer');
-  if (container) container.innerHTML = controlsHtml + '<div id="userList"></div>';
+  if (!container) return;
+
+  // Initialize controls once (preserve DOM nodes for IME stability)
+  if (!container.querySelector('#userSearch')) {
+    let controlsHtml = '';
+    if (isAdmin) {
+      controlsHtml = `<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <input type="text" id="userSearch" placeholder="搜索用户名..." style="flex:1;min-width:150px;background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:13px;">
+        <select id="userRoleFilter" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:13px;">
+          <option value="all">全部角色</option>
+          <option value="admin">管理员</option>
+          <option value="resident">常驻</option>
+          <option value="guest">普通</option>
+        </select>
+      </div>`;
+    }
+    container.innerHTML = controlsHtml + '<div id="userList"></div>';
+
+    // Attach events once (stable references, no IME disruption)
+    const searchInput = document.getElementById('userSearch');
+    const roleFilter = document.getElementById('userRoleFilter');
+    if (searchInput) {
+      searchInput.addEventListener('input', function() {
+        renderUsers(this.value, roleFilter?.value || 'all');
+      });
+      searchInput.addEventListener('compositionend', function() {
+        // Re-trigger after IME composition completes
+        renderUsers(this.value, roleFilter?.value || 'all');
+      });
+    }
+    if (roleFilter) {
+      roleFilter.addEventListener('change', function() {
+        renderUsers(searchInput?.value || '', this.value);
+      });
+    }
+  }
+
+  // Update controls with current filter values (without destroying them)
+  const searchInput = document.getElementById('userSearch');
+  const roleFilterEl = document.getElementById('userRoleFilter');
+  if (searchInput && filter !== undefined) {
+    searchInput.value = filter || '';
+  }
+  if (roleFilterEl && roleFilter !== undefined) {
+    roleFilterEl.value = roleFilter || 'all';
+  }
+
+  // Compute filtered list
   let filtered = users.filter(u => isAdmin || u.id === (currentUser && currentUser.id));
 
   // Role filter
@@ -143,22 +178,26 @@ function renderUsers(filter, roleFilter) {
     filtered = filtered.filter(u => u.name.toLowerCase().includes(q));
   }
 
-  el.innerHTML = filtered.map(u => {
-    const isActive = u.isActive !== false; // default true for existing users
-    const roleBadge = u.role === 'admin' ? '<span class="role-badge admin">管理员</span>' :
-                      u.role === 'resident' ? '<span class="role-badge resident">常驻</span>' :
-                      '<span class="role-badge guest">普通</span>';
-    const presetTag = (u.role === 'resident' && !u.passwordHash) ? ' <span style="font-size:10px;background:rgba(59,130,246,0.2);color:var(--accent-light);padding:1px 6px;border-radius:8px;">待匹配</span>' : '';
-    const inactiveStyle = !isActive ? 'opacity:0.5;' : '';
-    return `<div class="user-card ${currentUser && currentUser.id===u.id?'active':''}" onclick="selectUser('${u.id}')" style="${inactiveStyle}">
-      <div class="name">${escapeHtml(u.name)} ${roleBadge}${presetTag}</div>
-      <div class="info">${t(u.gender==='male'?'male':'female')} | ${u.age}${t('age')} | ${u.weight}kg</div>
-      ${isAdmin && u.id !== 'admin' ? `<div style="display:flex;gap:4px;margin-top:4px;">
-        <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="event.stopPropagation();toggleUserActive('${u.id}')" title="${isActive?'注销':'恢复'}">${isActive?'🔒 注销':'🔓 恢复'}</button>
-        <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="event.stopPropagation();deleteUser('${u.id}')" title="删除">✕ 删除</button>
-      </div>` : ''}
-    </div>`;
-  }).join('');
+  // Render only the list (never touches the search input)
+  const listEl = document.getElementById('userList');
+  if (listEl) {
+    listEl.innerHTML = filtered.map(u => {
+      const isActive = u.isActive !== false;
+      const roleBadge = u.role === 'admin' ? '<span class="role-badge admin">管理员</span>' :
+                        u.role === 'resident' ? '<span class="role-badge resident">常驻</span>' :
+                        '<span class="role-badge guest">普通</span>';
+      const presetTag = (u.role === 'resident' && !u.passwordHash) ? ' <span style="font-size:10px;background:rgba(59,130,246,0.2);color:var(--accent-light);padding:1px 6px;border-radius:8px;">待匹配</span>' : '';
+      const inactiveStyle = !isActive ? 'opacity:0.5;' : '';
+      return `<div class="user-card ${currentUser && currentUser.id===u.id?'active':''}" onclick="selectUser('${u.id}')" style="${inactiveStyle}">
+        <div class="name">${escapeHtml(u.name)} ${roleBadge}${presetTag}</div>
+        <div class="info">${t(u.gender==='male'?'male':'female')} | ${u.age}${t('age')} | ${u.weight}kg</div>
+        ${isAdmin && u.id !== 'admin' ? `<div style="display:flex;gap:4px;margin-top:4px;">
+          <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="event.stopPropagation();toggleUserActive('${u.id}')" title="${isActive?'注销':'恢复'}">${isActive?'🔒 注销':'🔓 恢复'}</button>
+          <button class="btn-action" style="padding:1px 6px;font-size:10px;" onclick="event.stopPropagation();deleteUser('${u.id}')" title="删除">✕ 删除</button>
+        </div>` : ''}
+      </div>`;
+    }).join('');
+  }
   } catch(e) { console.error('renderUsers error:', e); }
 }
 
@@ -168,7 +207,9 @@ function toggleUserActive(userId) {
   user.isActive = (user.isActive === false) ? true : false;
   logAudit(user.isActive ? 'reactivate_user' : 'deactivate_user', currentSession?.userId, `User ${user.name} (${userId}) ${user.isActive ? 'reactivated' : 'deactivated'}`);
   saveUsers();
-  renderUsers(document.getElementById('userSearch')?.value, document.getElementById('userRoleFilter')?.value);
+  const searchVal = document.getElementById('userSearch')?.value || '';
+  const roleVal = document.getElementById('userRoleFilter')?.value || 'all';
+  renderUsers(searchVal, roleVal);
 }
 
 function renderUserForm() {
@@ -699,5 +740,107 @@ function generateDietSummary() {
     });
   }, 100);
   } catch(e) { console.error('generateDietSummary error:', e); }
+}
+
+// ===== DIET PAGE RENDERING =====
+
+function renderDietPage() {
+  renderDietDateControls();
+  renderDietFoods();
+  renderHealthDashboard();
+  renderSupplementTracker();
+  generateDietSummary();
+}
+
+function renderDietDateControls() {
+  const el = document.getElementById('dietDateControls');
+  if (!el) return;
+
+  if (dietViewMode === 'range') {
+    renderDietDateRangePicker();
+    return;
+  }
+
+  const dates = getAvailableDietDates();
+  el.innerHTML = `
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input type="date" id="dietDatePicker" value="${selectedDietDate}" onchange="onDietDateChange(this.value)" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:13px;">
+      <label style="font-size:13px;color:var(--text-muted);cursor:pointer;">
+        <input type="checkbox" onchange="toggleDietViewMode(this.checked)"> 范围模式
+      </label>
+      ${dates.length > 0 ? `<span style="font-size:12px;color:var(--text-muted);">有记录: ${dates.slice(0, 5).join(', ')}${dates.length > 5 ? ' 等' : ''}</span>` : ''}
+    </div>
+  `;
+}
+
+function renderDietDateRangePicker() {
+  const el = document.getElementById('dietDateControls');
+  if (!el) return;
+  el.innerHTML = `
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <label style="font-size:13px;">开始: <input type="date" id="dietRangeStart" value="${dietDateRange.start}" onchange="dietDateRange.start=this.value;renderDietPage();" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;"></label>
+      <span style="color:var(--text-muted);">~</span>
+      <label style="font-size:13px;">结束: <input type="date" id="dietRangeEnd" value="${dietDateRange.end}" onchange="dietDateRange.end=this.value;renderDietPage();" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;"></label>
+      <button class="btn-action" style="padding:4px 10px;font-size:12px;" onclick="dietViewMode='single';renderDietPage();">单天视图</button>
+    </div>
+  `;
+}
+
+function onDietDateChange(dateStr) {
+  selectedDietDate = dateStr;
+  renderDietPage();
+}
+
+function toggleDietViewMode(range) {
+  dietViewMode = range ? 'range' : 'single';
+  if (range) {
+    // Set default range: last 7 days from selected date
+    const end = new Date(selectedDietDate);
+    const start = new Date(end);
+    start.setDate(start.getDate() - 6);
+    dietDateRange = { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+  }
+  renderDietPage();
+}
+
+// ===== ADD FOOD TO DIET =====
+
+function addDietFood() {
+  if (!currentUser) { alert(currentLang === 'zh' ? '请先选择用户' : 'Please select a user'); return; }
+  if (!FOOD_DB || FOOD_DB.length === 0) { alert(currentLang === 'zh' ? '食物数据库尚未加载' : 'Food database not loaded'); return; }
+  // Populate meal dropdown
+  const meals = getCurrentUserMeals(selectedDietDate);
+  const mealSelect = document.getElementById('dietMealSelect');
+  if (mealSelect) {
+    let mealOptions = '';
+    if (meals && meals.meals) {
+      Object.keys(meals.meals).forEach(function(mid) {
+        mealOptions += '<option value="' + mid + '">' + escapeHtml(meals.meals[mid].name) + '</option>';
+      });
+    }
+    mealOptions += '<option value="ungrouped">' + (currentLang === 'zh' ? '未分组' : 'Ungrouped') + '</option>';
+    mealSelect.innerHTML = mealOptions;
+  }
+  document.getElementById('addDietModal').classList.add('show');
+  document.getElementById('dietFoodSearch').value = '';
+  document.getElementById('dietFoodSelect').value = '';
+  document.getElementById('dietFoodAmount').value = 100;
+  filterDietFoods();
+}
+
+function confirmAddDietFood() {
+  const foodId = document.getElementById('dietFoodSelect').value;
+  const amount = parseFloat(document.getElementById('dietFoodAmount').value) || 100;
+  const mealId = document.getElementById('dietMealSelect').value;
+  if (!foodId) { alert(currentLang === 'zh' ? '请选择食物' : 'Please select a food'); return; }
+  const food = FOOD_DB.find(function(f){ return f.id === foodId; });
+  if (!food) { alert(currentLang === 'zh' ? '食物不存在' : 'Food not found'); return; }
+  addFoodToMeal(selectedDietDate, mealId || 'ungrouped', { foodId: foodId, amount: amount, name: food.name });
+  closeAddDietModal();
+  renderDietPage();
+}
+
+function closeAddDietModal() {
+  document.getElementById('addDietModal').classList.remove('show');
 }
 

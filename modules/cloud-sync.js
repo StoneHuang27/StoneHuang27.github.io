@@ -88,7 +88,7 @@ const CloudSync = {
     this.syncing = true;
     this.updateIndicator('syncing');
     try {
-      const keys = ['auth', 'users', 'diet'];
+      const keys = ['auth', 'users', 'diet', 'userFoods'];
       for (const key of keys) {
         const cloudData = await this.pull(key);
         if (cloudData !== null) {
@@ -110,6 +110,9 @@ const CloudSync = {
               break;
             case 'diet':
               localStorage.setItem('nutripro_allDietData', JSON.stringify(cloudData));
+              break;
+            case 'userFoods':
+              localStorage.setItem('nutripro_userFoods', JSON.stringify(cloudData));
               break;
           }
         }
@@ -192,6 +195,12 @@ const CloudSync = {
               localStorage.setItem('nutripro_allDietData', JSON.stringify(cloudData));
               allDietData = cloudData;
               renderDietFoods();
+              break;
+            case 'userFoods':
+              localStorage.setItem('nutripro_userFoods', JSON.stringify(cloudData));
+              // Reload food DB to merge new user-added foods
+              if (typeof renderFoodSidebar === 'function') renderFoodSidebar();
+              if (typeof renderFoodGrid === 'function') renderFoodGrid();
               break;
           }
         }
@@ -375,6 +384,7 @@ async function saveFirebaseConfig() {
         await CloudSync.push('auth', JSON.parse(localStorage.getItem('nutripro_auth') || '{}'));
         await CloudSync.push('users', JSON.parse(localStorage.getItem('nutripro_users') || '[]'));
         await CloudSync.push('diet', JSON.parse(localStorage.getItem('nutripro_allDietData') || '{}'));
+        await CloudSync.push('userFoods', JSON.parse(localStorage.getItem('nutripro_userFoods') || '[]'));
       }
       statusEl.innerHTML = '<span style="color:var(--success);">✅ Supabase 云同步已连接！数据将自动同步到所有设备。</span>';
       users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
