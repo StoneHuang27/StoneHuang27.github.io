@@ -16,27 +16,11 @@ function getCurrentUserDiet(dateStr) {
   if (!allDietData[currentUser.id]) allDietData[currentUser.id] = {};
   return allDietData[currentUser.id][dateStr] || [];
 }
-function saveDietData() {
-  localStorage.setItem('nutripro_allDietData', JSON.stringify(allDietData));
-  CloudSync.push('diet', allDietData);
-}
-function getDietFoodsForSelectedDates() {
-  if (!currentUser) return [];
-  if (dietViewMode === 'single') {
-    return getCurrentUserDiet(selectedDietDate);
-  } else {
-    // merge all days in range
-    let merged = [];
-    let d = new Date(dietDateRange.start);
-    let end = new Date(dietDateRange.end);
-    while (d <= end) {
-      let ds = d.toISOString().split('T')[0];
-      merged = merged.concat(getCurrentUserDiet(ds));
-      d.setDate(d.getDate() + 1);
-    }
-    return merged;
-  }
-}
+
+// NOTE: The canonical saveDietData and getDietFoodsForSelectedDates are defined later
+// in this file (after ensureMealStructure) to avoid hoisting issues with meal structure.
+// The early definitions below are kept for backward compatibility but will be overwritten.
+
 function getAvailableDietDates() {
   if (!currentUser || !allDietData[currentUser.id]) return [];
   return Object.keys(allDietData[currentUser.id]).sort().reverse();
@@ -644,20 +628,29 @@ function renderDietFoods() {
 
 function generateDietSummary() {
   try {
+  // Check prerequisites
+  if (!FOOD_DB || FOOD_DB.length === 0) {
+    document.getElementById('dietSummary').innerHTML = '<div class="calc-card"><p style="color:var(--warning);">⚠️ ' + (currentLang === 'zh' ? '食物数据库尚未加载，请稍后再试' : 'Food database not loaded, please try again') + '</p></div>';
+    return;
+  }
   const dietFoods = getDietFoodsForSelectedDates();
-  const totalCal = dietFoods.reduce((s,d) => {
+  if (!dietFoods || dietFoods.length === 0) {
+    document.getElementById('dietSummary').innerHTML = '<div class="calc-card"><p style="color:var(--text-muted);">' + (currentLang === 'zh' ? '暂无饮食记录，请先添加食物' : 'No diet entries yet, please add foods first') + '</p></div>';
+    return;
+  }
+  let totalCal = dietFoods.reduce((s,d) => {
     const f = FOOD_DB.find(x=>x.id===d.foodId);
     return s + (f ? parseFloat(f.energyKCal||0)*d.amount/100 : 0);
   }, 0);
-  const totalP = dietFoods.reduce((s,d) => {
+  let totalP = dietFoods.reduce((s,d) => {
     const f = FOOD_DB.find(x=>x.id===d.foodId);
     return s + (f ? parseFloat(f.protein||0)*d.amount/100 : 0);
   }, 0);
-  const totalC = dietFoods.reduce((s,d) => {
+  let totalC = dietFoods.reduce((s,d) => {
     const f = FOOD_DB.find(x=>x.id===d.foodId);
     return s + (f ? parseFloat(f.CHO||0)*d.amount/100 : 0);
   }, 0);
-  const totalF = dietFoods.reduce((s,d) => {
+  let totalF = dietFoods.reduce((s,d) => {
     const f = FOOD_DB.find(x=>x.id===d.foodId);
     return s + (f ? parseFloat(f.fat||0)*d.amount/100 : 0);
   }, 0);
@@ -703,43 +696,66 @@ function generateDietSummary() {
   </div>`;
 
   // Render donut chart
-  setTimeout(function() {
+  function drawChart() {
     const canvas = document.getElementById('macroDonutChart');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    if (typeof Chart === 'undefined') { console.warn('Chart.js not loaded'); return; }
-    new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: [t('carbs_diet'), t('fat_diet'), t('protein_diet')],
-        datasets: [{
-          data: [cCal, fCal, pCal],
-          backgroundColor: ['#3b82f6', '#f59e0b', '#22c55e'],
-          borderColor: ['#2563eb', '#d97706', '#16a34a'],
-          borderWidth: 2,
-          hoverOffset: 6
-        }]
-      },
-      options: {
-        responsive: false,
-        cutout: '60%',
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: function(ctx) {
-                const total = ctx.dataset.data.reduce((a,b)=>a+b, 0);
-                const pct = total > 0 ? Math.round(ctx.parsed / total * 100) : 0;
-                const gVal = [totalC, totalF, totalP][ctx.dataIndex];
-                return ctx.label + ': ' + gVal.toFixed(1) + 'g (' + pct + '%)';
+    if (typeof Chart === 'undefined') {
+      // Chart.js not loaded — show text-based fallback
+      const summaryEl = document.getElementById('dietSummary');
+      if (summaryEl) {
+        const card = summaryEl.querySelector('.calc-card');
+        if (card) {
+          card.insertAdjacentHTML('beforeend', '<p style="color:var(--warning);font-size:12px;margin-top:8px;">' + (currentLang === 'zh' ? '⚠️ 图表库加载失败，上方数据已显示' : '⚠️ Chart.js failed to load, data shown above') + '</p>');
+        }
+      }
+      console.warn('Chart.js not available, showing text fallback');
+      return;
+    }
+    try {
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: [t('carbs_diet'), t('fat_diet'), t('protein_diet')],
+          datasets: [{
+            data: [cCal, fCal, pCal],
+            backgroundColor: ['#3b82f6', '#f59e0b', '#22c55e'],
+            borderColor: ['#2563eb', '#d97706', '#16a34a'],
+            borderWidth: 2,
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: false,
+          cutout: '60%',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  const total = ctx.dataset.data.reduce((a,b)=>a+b, 0);
+                  const pct = total > 0 ? Math.round(ctx.parsed / total * 100) : 0;
+                  const gVal = [totalC, totalF, totalP][ctx.dataIndex];
+                  return ctx.label + ': ' + gVal.toFixed(1) + 'g (' + pct + '%)';
+                }
               }
             }
           }
         }
-      }
-    });
-  }, 100);
-  } catch(e) { console.error('generateDietSummary error:', e); }
+      });
+    } catch(e) {
+      console.error('Chart render error:', e);
+    }
+  }
+  // Draw chart immediately (DOM is already updated above)
+  setTimeout(drawChart, 10);
+  } catch(e) {
+    console.error('generateDietSummary error:', e);
+    const el = document.getElementById('dietSummary');
+    if (el) {
+      el.innerHTML = '<div class="calc-card"><p style="color:var(--warning);">⚠️ ' + (currentLang === 'zh' ? '生成摘要时出错: ' + e.message : 'Error generating summary: ' + e.message) + '</p></div>';
+    }
+  }
 }
 
 // ===== DIET PAGE RENDERING =====
@@ -749,7 +765,6 @@ function renderDietPage() {
   renderDietFoods();
   renderHealthDashboard();
   renderSupplementTracker();
-  generateDietSummary();
 }
 
 function renderDietDateControls() {

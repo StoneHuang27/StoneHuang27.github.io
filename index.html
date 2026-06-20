@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NutriPro v1.4 运动营养数据平台</title>
+<title>NutriPro v1.5.2 运动营养数据平台</title>
 <script>
 // Supabase SDK (replaces Firebase — accessible in China without VPN)
 // Correct UMD path: auto-resolve via CDN (no /dist/supabase.min.js — that path does NOT exist)
@@ -75,10 +75,24 @@
 })();
 </script>
 <script>
-var s=document.createElement('script');
-s.src='https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
-s.onerror=function(){var f=document.createElement('script');f.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js';document.head.appendChild(f);};
-document.head.appendChild(s);
+(function loadChartJS(){
+  if(typeof Chart!=='undefined')return;
+  var urls=[
+    'https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js',
+    'https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
+    'https://unpkg.com/chart.js@4.4.7/dist/chart.umd.min.js'
+  ];
+  var i=0;
+  function tryNext(){
+    if(i>=urls.length){console.warn('Chart.js: all CDNs failed');return;}
+    var s=document.createElement('script');
+    s.src=urls[i++];
+    s.onload=function(){window._chartReady=true;};
+    s.onerror=tryNext;
+    document.head.appendChild(s);
+  }
+  tryNext();
+})();
 </script>
 <script>
 (function loadCanvas(){
@@ -106,7 +120,7 @@ var __FOOD_DB_EMBEDDED = "H4sIAAAAAAAC/+y965NdxZUv+H3+CgWfTMSdisyV7/nWzVz3jfB1T8
 <!-- ===== AUTH LOGIN SCREEN ===== -->
 <div class="auth-overlay" id="authOverlay">
   <div class="auth-card">
-    <h1>🏋️ Nutri<span>Pro</span> <span style="font-size:14px;color:var(--text-muted);font-weight:normal;">v1.4</span></h1>
+    <h1>🏋️ Nutri<span>Pro</span> <span style="font-size:14px;color:var(--text-muted);font-weight:normal;">v1.5</span></h1>
     <div class="auth-sub" id="authSub">运动营养数据平台 · 身份验证</div>
 
     <!-- Auth Tabs -->

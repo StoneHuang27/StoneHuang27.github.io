@@ -1,8 +1,71 @@
-# NutriPro v1.3 — 运动营养数据平台
+# NutriPro v1.5.2 — 运动营养数据平台
 
 > 一款面向健身/运动人群的全功能营养管理平台，集成食物数据库、身体指标计算器、饮食记录和个性化建议。
 
-## v1.3 更新日志
+## v1.5.2 更新日志（正式部署版）
+
+### 关键修复
+- **饮食摘要环形图修复（终版）**：将 `generateDietSummary()` 中 `totalP/C/F/Cal` 变量从 `const` 改为 `let`，修复"Assignment to constant variable"错误，使补剂营养数据能正确累加到饮食摘要中
+- **Service Worker 缓存版本升级**：`CACHE_NAME` 从 `v5` → `v6`，`RUNTIME_CACHE` 从 `v1` → `v2`，确保所有更新生效
+- **i18n 翻译键补全**：`total_calories`、`protein_diet`、`carbs_diet`、`fat_diet`、`macro_ratio_label`、`diet_summary_prefix`、`diet_summary_suffix` 中英文翻译完整
+
+### 修改文件
+- `sw.js` — `CACHE_NAME` `v5` → `v6`，`RUNTIME_CACHE` `v1` → `v2`
+- `modules/diet.js` — `const totalP/C/F/Cal` → `let`，修复补剂营养累加
+- `modules/utils.js` — 补充饮食摘要相关 i18n 翻译键
+- `modules/app.js` — 版本号更新
+- `index.html` — 版本号更新
+- `README.md` — 版本更新为 v1.5.2
+
+---
+
+# NutriPro v1.5.1 — 运动营养数据平台
+
+> 一款面向健身/运动人群的全功能营养管理平台，集成食物数据库、身体指标计算器、饮食记录和个性化建议。
+
+## v1.5.1 更新日志（饮食摘要图表修复）
+
+### 关键修复
+- **饮食摘要环形图不显示**：升级 Service Worker 缓存版本（`nutripro-v4` → `nutripro-v5`），确保浏览器加载最新代码
+- **`renderDietPage()` 不再自动渲染空摘要**：移除页面切换时自动调用 `generateDietSummary()`，仅在用户点击"生成饮食摘要"按钮时才渲染
+- **i18n 翻译键补全**：添加 `total_calories`、`protein_diet`、`carbs_diet`、`fat_diet`、`macro_ratio_label`、`diet_summary_prefix`、`diet_summary_suffix` 的中英文翻译
+- **`generateDietSummary()` 错误处理增强**：
+  - FOOD_DB 未加载时显示友好提示
+  - 无饮食记录时显示"请先添加食物"提示
+  - Chart.js 加载失败时在卡片底部显示警告（而非插入到错误位置）
+  - 图表渲染延迟从 50ms 降至 10ms（DOM 已就绪，无需等待）
+  - 顶层 try-catch 捕获错误后在页面上显示具体错误信息
+
+### 修改文件
+- `sw.js` — CACHE_NAME `v4` → `v5`
+- `modules/diet.js` — `renderDietPage()` 移除 `generateDietSummary()` 调用；`generateDietSummary()` 增强错误处理和用户反馈
+- `modules/utils.js` — 补充饮食摘要相关 i18n 翻译键
+- `README.md` — 版本更新为 v1.5.1
+
+---
+
+## v1.5 更新日志
+
+### 数据持久化修复（关键）
+- **健康数据云同步**：`health` 数据现在加入云同步 key 列表，清除浏览器数据后可从云端恢复
+- **补剂记录云同步**：`supplementLog` 和 `customSupplements` 现在通过 `supplement` key 同步到云端
+- **照片关联云同步**：`associatePhotoWithDiet()` 和 `removePhoto()` 现在调用 `CloudSync.push('health')`
+- **手动同步增强**：点击云同步图标后，自动刷新健康数据和补剂记录 UI
+
+### 跨设备食物同步修复（关键）
+- **FOOD_DB 重建机制**：从云端拉取 `userFoods` 后，自动调用 `rebuildFoodDB()` 重新合并食物数据库
+- **实时监听增强**：收到 `userFoods` 实时推送时，重建 FOOD_DB 并更新所有食物 UI
+- **轮询同步增强**：30 秒轮询检测到 userFoods 变化时，自动重建 FOOD_DB
+- **`allFoodsForDiet` 同步更新**：FOOD_DB 重建后同步更新饮食页面食物下拉列表
+
+### Bug 修复
+- **饮食摘要环形图**：Chart.js 加载失败时显示文本降级提示；Chart.js CDN 增加多源自动切换（jsdelivr → bootcdn → unpkg）
+- **`logAudit` 未定义错误**：在 state.js 中实现 `logAudit()` 函数，修复用户删除/停用时的 ReferenceError
+- **重复函数清理**：移除 diet.js 中重复定义的 `saveDietData()` 和 `getDietFoodsForSelectedDates()`，避免混淆
+
+### 清理优化
+- Service Worker CDN_ASSETS 增加 Chart.js 多 CDN 源缓存
+- 版本更新为 v1.5
 
 ### 新增功能
 - **食物数据库跨设备同步**：管理员添加/编辑的食物通过 Supabase 云同步，多设备可见

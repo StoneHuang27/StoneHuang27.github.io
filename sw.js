@@ -4,8 +4,8 @@
 // Purpose: Offline support via cache-first strategy
 // ============================================================
 
-const CACHE_NAME = 'nutripro-v4';
-const RUNTIME_CACHE = 'nutripro-runtime-v1';
+const CACHE_NAME = 'nutripro-v6';
+const RUNTIME_CACHE = 'nutripro-runtime-v2';
 
 // Static assets to cache on install
 const STATIC_ASSETS = [
@@ -36,6 +36,9 @@ const STATIC_ASSETS = [
 const CDN_ASSETS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
   'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js',
+  'https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js',
+  'https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
+  'https://unpkg.com/chart.js@4.4.7/dist/chart.umd.min.js',
   'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
 ];
 

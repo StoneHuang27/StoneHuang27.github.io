@@ -312,6 +312,7 @@ function associatePhotoWithDiet(base64, dateStr) {
     timestamp: Date.now()
   });
   localStorage.setItem('nutripro_healthData', JSON.stringify(healthData));
+  CloudSync.push('health', healthData);
   renderPhotoGallery(dateStr);
   showSyncNotification(currentLang === 'zh' ? '✅ 照片已添加' : 'Photo added');
 }
@@ -341,6 +342,7 @@ function removePhoto(photoId) {
   if (filtered.length !== photos.length) {
     healthData[currentUser.id][dateStr].photos = filtered;
     localStorage.setItem('nutripro_healthData', JSON.stringify(healthData));
+    CloudSync.push('health', healthData);
     renderPhotoGallery(dateStr);
   }
 }

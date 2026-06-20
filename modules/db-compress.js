@@ -95,6 +95,45 @@ function decompressEmbeddedDB_Sync(compressedBytes) {
 }
 
 /**
+ * Merge user-edited/added foods from the userFoods array into FOOD_DB.
+ * Called during initEmbeddedDB() and after cloud sync updates.
+ * @param {Array} userFoodsArr - The userFoods operation log array
+ */
+function mergeUserFoodsIntoDB(userFoodsArr) {
+  if (!Array.isArray(userFoodsArr)) return;
+  userFoodsArr.forEach(function(entry) {
+    if (entry.action === 'add') {
+      var exists = FOOD_DB.find(function(f) { return f.id === entry.foodId; });
+      if (!exists) FOOD_DB.push(entry.data);
+    } else if (entry.action === 'edit' && entry.foodId) {
+      var idx = FOOD_DB.findIndex(function(f) { return f.id === entry.foodId; });
+      if (idx >= 0) FOOD_DB[idx] = Object.assign({}, FOOD_DB[idx], entry.data);
+    }
+  });
+}
+
+/**
+ * Rebuild FOOD_DB from embedded data + userFoods.
+ * This is used after cloud sync to merge newly synced user foods.
+ */
+async function rebuildFoodDB() {
+  // Re-decompress the embedded base DB (always the same)
+  try {
+    var foods = await decompressEmbeddedDB();
+    FOOD_DB = foods;
+    // Merge userFoods from localStorage (which was just updated by cloud sync)
+    var saved = JSON.parse(localStorage.getItem('nutripro_userFoods') || '[]');
+    mergeUserFoodsIntoDB(saved);
+    console.log('FOOD_DB rebuilt with ' + FOOD_DB.length + ' food items');
+  } catch(e) {
+    console.error('rebuildFoodDB error:', e);
+    // Fallback: just merge userFoods into existing FOOD_DB
+    var saved = JSON.parse(localStorage.getItem('nutripro_userFoods') || '[]');
+    mergeUserFoodsIntoDB(saved);
+  }
+}
+
+/**
  * Initialize the food database from embedded compressed data.
  * This is the main entry point called from app.js init().
  */
@@ -106,15 +145,7 @@ async function initEmbeddedDB() {
 
     // Merge user-edited/added foods (v1.2 migration)
     var saved = JSON.parse(localStorage.getItem('nutripro_userFoods') || '[]');
-    saved.forEach(function(entry) {
-      if (entry.action === 'add') {
-        var exists = FOOD_DB.find(function(f) { return f.id === entry.foodId; });
-        if (!exists) FOOD_DB.push(entry.data);
-      } else if (entry.action === 'edit' && entry.foodId) {
-        var idx = FOOD_DB.findIndex(function(f) { return f.id === entry.foodId; });
-        if (idx >= 0) FOOD_DB[idx] = Object.assign({}, FOOD_DB[idx], entry.data);
-      }
-    });
+    mergeUserFoodsIntoDB(saved);
 
     return true;
   } catch (e) {

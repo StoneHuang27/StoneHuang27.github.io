@@ -50,6 +50,18 @@ let dietClipboard = null;
 // ===== AUDIT LOG =====
 let auditLog = JSON.parse(localStorage.getItem('nutripro_auditLog') || '[]');
 
+function logAudit(action, userId, details) {
+  auditLog.push({
+    action: action,
+    userId: userId || 'system',
+    details: details || '',
+    timestamp: Date.now()
+  });
+  // Keep last 1000 entries
+  if (auditLog.length > 1000) auditLog = auditLog.slice(-1000);
+  localStorage.setItem('nutripro_auditLog', JSON.stringify(auditLog));
+}
+
 // ===== SUPPLEMENT LOG =====
 let supplementLog = JSON.parse(localStorage.getItem('nutripro_supplementLog') || '{}');
 

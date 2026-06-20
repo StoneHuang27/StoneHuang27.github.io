@@ -88,7 +88,7 @@ const CloudSync = {
     this.syncing = true;
     this.updateIndicator('syncing');
     try {
-      const keys = ['auth', 'users', 'diet', 'userFoods'];
+      const keys = ['auth', 'users', 'diet', 'userFoods', 'health', 'supplement'];
       for (const key of keys) {
         const cloudData = await this.pull(key);
         if (cloudData !== null) {
@@ -113,6 +113,24 @@ const CloudSync = {
               break;
             case 'userFoods':
               localStorage.setItem('nutripro_userFoods', JSON.stringify(cloudData));
+              // Rebuild FOOD_DB to include cloud-synced user foods
+              if (typeof rebuildFoodDB === 'function') {
+                rebuildFoodDB().then(function() {
+                  if (typeof renderFoodSidebar === 'function') renderFoodSidebar();
+                  if (typeof renderFoodGrid === 'function') renderFoodGrid();
+                  if (typeof allFoodsForDiet !== 'undefined') {
+                    allFoodsForDiet = FOOD_DB.map(function(f){ return {id:f.id, name:f.name, nameEn:f.nameEn||''}; });
+                  }
+                }).catch(function(e) { console.error('rebuildFoodDB failed:', e); });
+              }
+              break;
+            case 'health':
+              localStorage.setItem('nutripro_healthData', JSON.stringify(cloudData));
+              healthData = cloudData;
+              break;
+            case 'supplement':
+              localStorage.setItem('nutripro_supplementLog', JSON.stringify(cloudData));
+              supplementLog = cloudData;
               break;
           }
         }
@@ -198,9 +216,26 @@ const CloudSync = {
               break;
             case 'userFoods':
               localStorage.setItem('nutripro_userFoods', JSON.stringify(cloudData));
-              // Reload food DB to merge new user-added foods
-              if (typeof renderFoodSidebar === 'function') renderFoodSidebar();
-              if (typeof renderFoodGrid === 'function') renderFoodGrid();
+              // Rebuild FOOD_DB to merge cloud-synced user foods
+              if (typeof rebuildFoodDB === 'function') {
+                rebuildFoodDB().then(function() {
+                  if (typeof renderFoodSidebar === 'function') renderFoodSidebar();
+                  if (typeof renderFoodGrid === 'function') renderFoodGrid();
+                  if (typeof allFoodsForDiet !== 'undefined') {
+                    allFoodsForDiet = FOOD_DB.map(function(f){ return {id:f.id, name:f.name, nameEn:f.nameEn||''}; });
+                  }
+                }).catch(function(e) { console.error('rebuildFoodDB failed:', e); });
+              }
+              break;
+            case 'health':
+              localStorage.setItem('nutripro_healthData', JSON.stringify(cloudData));
+              healthData = cloudData;
+              if (typeof renderHealthDashboard === 'function') renderHealthDashboard();
+              break;
+            case 'supplement':
+              localStorage.setItem('nutripro_supplementLog', JSON.stringify(cloudData));
+              supplementLog = cloudData;
+              if (typeof renderSupplementTracker === 'function') renderSupplementTracker();
               break;
           }
         }
@@ -224,6 +259,8 @@ const CloudSync = {
         await self.pullAll();
         const newUsers = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
         const newDiet = JSON.parse(localStorage.getItem('nutripro_allDietData') || '{}');
+        const newHealth = JSON.parse(localStorage.getItem('nutripro_healthData') || '{}');
+        const newSupp = JSON.parse(localStorage.getItem('nutripro_supplementLog') || '{}');
         if (JSON.stringify(newUsers) !== JSON.stringify(users)) {
           users = newUsers;
           if (currentUser) currentUser = users.find(u => u.id === currentUser.id) || currentUser;
@@ -233,6 +270,14 @@ const CloudSync = {
         if (JSON.stringify(newDiet) !== JSON.stringify(allDietData)) {
           allDietData = newDiet;
           renderDietFoods();
+        }
+        if (JSON.stringify(newHealth) !== JSON.stringify(healthData)) {
+          healthData = newHealth;
+          if (typeof renderHealthDashboard === 'function') renderHealthDashboard();
+        }
+        if (JSON.stringify(newSupp) !== JSON.stringify(supplementLog)) {
+          supplementLog = newSupp;
+          if (typeof renderSupplementTracker === 'function') renderSupplementTracker();
         }
         const auth = getAuthData();
         const appCountEl = document.getElementById('appCount');
@@ -385,6 +430,8 @@ async function saveFirebaseConfig() {
         await CloudSync.push('users', JSON.parse(localStorage.getItem('nutripro_users') || '[]'));
         await CloudSync.push('diet', JSON.parse(localStorage.getItem('nutripro_allDietData') || '{}'));
         await CloudSync.push('userFoods', JSON.parse(localStorage.getItem('nutripro_userFoods') || '[]'));
+        await CloudSync.push('health', JSON.parse(localStorage.getItem('nutripro_healthData') || '{}'));
+        await CloudSync.push('supplement', JSON.parse(localStorage.getItem('nutripro_supplementLog') || '{}'));
       }
       statusEl.innerHTML = '<span style="color:var(--success);">✅ Supabase 云同步已连接！数据将自动同步到所有设备。</span>';
       users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
@@ -447,6 +494,8 @@ function handleSyncIndicatorClick() {
       // Refresh in-memory data
       users = JSON.parse(localStorage.getItem('nutripro_users') || '[]');
       allDietData = JSON.parse(localStorage.getItem('nutripro_allDietData') || '{}');
+      healthData = JSON.parse(localStorage.getItem('nutripro_healthData') || '{}');
+      supplementLog = JSON.parse(localStorage.getItem('nutripro_supplementLog') || '{}');
       if (currentUser) {
         currentUser = users.find(u => u.id === currentUser.id) || currentUser;
       }
@@ -454,6 +503,8 @@ function handleSyncIndicatorClick() {
       renderUserForm();
       renderAdminSidebar();
       renderDietFoods();
+      renderHealthDashboard();
+      renderSupplementTracker();
       showSyncNotification('✅ 数据同步完成');
       CloudSync.updateIndicator('connected');
     }).catch(e => {

@@ -44,6 +44,7 @@ function takeSupplement(supplementId, servings) {
   });
 
   localStorage.setItem('nutripro_supplementLog', JSON.stringify(supplementLog));
+  CloudSync.push('supplement', supplementLog);
   return true;
 }
 
@@ -124,6 +125,7 @@ function removeSupplement(index) {
   if (supplementLog[currentUser.id] && supplementLog[currentUser.id][dateStr]) {
     supplementLog[currentUser.id][dateStr].splice(index, 1);
     localStorage.setItem('nutripro_supplementLog', JSON.stringify(supplementLog));
+    CloudSync.push('supplement', supplementLog);
     renderSupplementTracker();
   }
 }

@@ -10,7 +10,7 @@ function showSettings() {
 }
 function closeSettings() { document.getElementById('settingsModal').classList.remove('show'); }
 function saveSettings() {
-  siteName = document.getElementById('settingSiteName').value || 'NutriPro v1.4 运动营养数据平台';
+  siteName = document.getElementById('settingSiteName').value || 'NutriPro v1.5.2 运动营养数据平台';
   localStorage.setItem('nutripro_siteName', siteName);
   applySiteName();
   // Save energy unit preference
@@ -23,8 +23,8 @@ function saveSettings() {
 }
 function applySiteName() {
   var el = document.getElementById('siteNameSpan');
-  if (el) el.textContent = siteName || 'NutriPro v1.4 运动营养数据平台';
-  document.title = (siteName || 'NutriPro v1.4 运动营养数据平台') + t('title_suffix');
+  if (el) el.textContent = siteName || 'NutriPro v1.5.2 运动营养数据平台';
+  document.title = (siteName || 'NutriPro v1.5.2 运动营养数据平台') + t('title_suffix');
 }
 function toggleFilter(type) {
   if (type === 'fodmap') {
