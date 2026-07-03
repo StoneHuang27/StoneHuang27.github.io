@@ -1,66 +1,6 @@
-# NutriPro v1.5.3 — 运动营养数据平台
+# NutriPro v1.5 — 运动营养数据平台
 
 > 一款面向健身/运动人群的全功能营养管理平台，集成食物数据库、身体指标计算器、饮食记录和个性化建议。
-
-## v1.5.3 更新日志（视觉美化版）
-
-### 动画与交互增强
-- **页面切换淡入淡出**：4 个主页面（食物/计算/饮食/建议）切换时平滑 fade 过渡（250ms）
-- **模态框缩放动画**：所有模态框（食物详情/设置/配方/云同步/饮食添加/权限申请/食物编辑）打开时 zoomIn，关闭时 zoomOut
-- **手风琴平滑展开/收起**：食物详情弹窗中 20+ 个营养属性组折叠/展开从瞬间切换改为 max-height 平滑过渡
-- **卡片 hover 增强**：食物卡片上浮从 -2px 提升至 -4px，阴影加深至 `0 8px 24px rgba(59,130,246,0.25)`；用户卡片/计算卡片增加阴影反馈
-- **Badge 脉冲动画**：FODMAP 标签/饮食标签 hover 时呼吸光晕效果
-- **Tab 激活指示器滑入**：底部蓝色指示条从 0 宽度平滑滑入 100%
-- **Loading Spinner 光晕**：食物数据库加载 spinner 增加蓝色 `box-shadow` 光晕
-- **Admin 侧边栏遮罩渐显**：`admin-backdrop` 从 `opacity:0` 渐变为 `opacity:1`
-- **Auth 登录页入场动画**：身份验证页面 fade-in 淡入效果
-- **响应式断点扩展**：新增 1024px（iPad）和 480px（小屏手机）两档断点
-
-### 库集成
-- **animate.css 4.x**：通过 cdnjs CDN 引入（~35KB gzipped），用于页面切换 fade、模态框 zoom、手风琴动画
-- **Hover.css**：通过 cdnjs CDN 引入（~12KB gzipped），提供 160+ CSS hover 效果增强
-
-### Service Worker
-- **缓存版本升级**：`CACHE_NAME` 从 `v6` → `v7`，`RUNTIME_CACHE` 从 `v2` → `v3`，确保浏览器加载最新代码
-
-### 修改文件
-- `sw.js` — `CACHE_NAME` `v6` → `v7`，`RUNTIME_CACHE` `v2` → `v3`
-- `styles.css` — 页面切换/模态框/手风琴/卡片 hover/Badge/Tab/Spinner/响应式等全面动画增强
-- `index.html` — 引入 animate.css + Hover.css CDN
-- `modules/food-render.js` — `switchToPage()` 动画接入、`closeModal()` zoomOut、`toggleAttr()` 平滑展开
-- `modules/app.js` — `showSettings()`/`closeSettings()` 动画接入
-- `modules/admin-food.js` — `closeFoodEditModal()`/`closeAppModal()`/`openAppModal()` 动画接入
-- `modules/calculators.js` — `closeFormulaModal()`/打开动画接入
-- `modules/cloud-sync.js` — `closeFirebaseConfig()`/`openFirebaseConfig()` 动画接入
-- `modules/diet.js` — `closeAddDietModal()`/打开动画接入
-- `README.md` — 版本更新为 v1.5.3
-
----
-
-# NutriPro v1.5.1 — 运动营养数据平台
-
-> 一款面向健身/运动人群的全功能营养管理平台，集成食物数据库、身体指标计算器、饮食记录和个性化建议。
-
-## v1.5.1 更新日志（饮食摘要图表修复）
-
-### 关键修复
-- **饮食摘要环形图不显示**：升级 Service Worker 缓存版本（`nutripro-v4` → `nutripro-v5`），确保浏览器加载最新代码
-- **`renderDietPage()` 不再自动渲染空摘要**：移除页面切换时自动调用 `generateDietSummary()`，仅在用户点击"生成饮食摘要"按钮时才渲染
-- **i18n 翻译键补全**：添加 `total_calories`、`protein_diet`、`carbs_diet`、`fat_diet`、`macro_ratio_label`、`diet_summary_prefix`、`diet_summary_suffix` 的中英文翻译
-- **`generateDietSummary()` 错误处理增强**：
-  - FOOD_DB 未加载时显示友好提示
-  - 无饮食记录时显示"请先添加食物"提示
-  - Chart.js 加载失败时在卡片底部显示警告（而非插入到错误位置）
-  - 图表渲染延迟从 50ms 降至 10ms（DOM 已就绪，无需等待）
-  - 顶层 try-catch 捕获错误后在页面上显示具体错误信息
-
-### 修改文件
-- `sw.js` — CACHE_NAME `v4` → `v5`
-- `modules/diet.js` — `renderDietPage()` 移除 `generateDietSummary()` 调用；`generateDietSummary()` 增强错误处理和用户反馈
-- `modules/utils.js` — 补充饮食摘要相关 i18n 翻译键
-- `README.md` — 版本更新为 v1.5.1
-
----
 
 ## v1.5 更新日志
 

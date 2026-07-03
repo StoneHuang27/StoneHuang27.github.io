@@ -373,26 +373,9 @@ function showFormula(key) {
     <div class="formula-box"><pre style="white-space:pre-wrap;">${f.formula}</pre></div>
     <p class="formula-ref">📖 ${f.ref}</p>
   `;
-  const fm = document.getElementById('formulaModal');
-  const fmInner = fm.querySelector('.modal');
-  if (fmInner) {
-    fmInner.classList.remove('animate__animated', 'animate__zoomOut');
-    fmInner.classList.add('animate__animated', 'animate__zoomIn');
-  }
-  fm.classList.add('show');
+  document.getElementById('formulaModal').classList.add('show');
 }
-function closeFormulaModal() {
-  const modal = document.getElementById('formulaModal');
-  const inner = modal.querySelector('.modal');
-  if (inner) {
-    inner.classList.add('animate__animated', 'animate__zoomOut');
-    inner.addEventListener('animationend', function handler() {
-      inner.classList.remove('animate__animated', 'animate__zoomOut');
-      inner.removeEventListener('animationend', handler);
-    }, { once: true });
-  }
-  modal.classList.remove('show');
-}
+function closeFormulaModal() { document.getElementById('formulaModal').classList.remove('show'); }
 
 // ===== EXPORT =====
 function exportResult(elId) {

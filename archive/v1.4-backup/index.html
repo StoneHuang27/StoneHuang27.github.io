@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NutriPro v1.5.3 运动营养数据平台</title>
+<title>NutriPro v1.5 运动营养数据平台</title>
 <script>
 // Supabase SDK (replaces Firebase — accessible in China without VPN)
 // Correct UMD path: auto-resolve via CDN (no /dist/supabase.min.js — that path does NOT exist)
@@ -102,8 +102,6 @@ s.onerror=function(){var f=document.createElement('script');f.src='https://cdn.j
 document.head.appendChild(s);
 })();
 </script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/hover.css/2.3.1/css/hover-min.css">
 <link rel="stylesheet" href="styles.css">
 <!-- Module dependencies (loaded before body) -->
 <script src="modules/config.js"></script>
@@ -564,7 +562,6 @@ var __FOOD_DB_EMBEDDED = "H4sIAAAAAAAC/+y965NdxZUv+H3+CgWfTMSdisyV7/nWzVz3jfB1T8
     });
   }
 </script>
-<script src="modules/data-export.js"></script>
 <script>
   // Initialize the app when DOM is ready
   document.addEventListener('DOMContentLoaded', init);
@@ -593,12 +590,8 @@ var __FOOD_DB_EMBEDDED = "H4sIAAAAAAAC/+y965NdxZUv+H3+CgWfTMSdisyV7/nWzVz3jfB1T8
         </div>
       </div>
       <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
-        <button class="auth-btn auth-btn-secondary" style="padding:8px 16px;width:auto;font-size:13px;" onclick="closeSettings();exportAllData()">📥 <span data-i18n="export_data">导出数据</span></button>
-        <button class="auth-btn auth-btn-secondary" style="padding:8px 16px;width:auto;font-size:13px;margin-left:8px;" onclick="closeSettings();importLocalData()">📤 <span data-i18n="import_data">导入数据</span></button>
-      </div>
-      <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
-        <button class="auth-btn auth-btn-secondary" style="padding:8px 16px;width:auto;font-size:13px;" onclick="closeSettings();openFirebaseConfig()">云同步设置</button>
-        <button class="auth-btn auth-btn-secondary" style="padding:8px 16px;width:auto;font-size:13px;margin-left:8px;" onclick="logout()">退出登录</button>
+        <button class="auth-btn auth-btn-secondary" style="padding:8px 16px;width:auto;font-size:13px;" onclick="closeSettings();openFirebaseConfig()">☁️ 云同步设置</button>
+        <button class="auth-btn auth-btn-secondary" style="padding:8px 16px;width:auto;font-size:13px;margin-left:8px;" onclick="logout()">🚪 退出登录</button>
       </div>
       <button class="btn-primary" onclick="saveSettings()" data-i18n="save" style="margin-top:12px;">保存</button>
     </div>

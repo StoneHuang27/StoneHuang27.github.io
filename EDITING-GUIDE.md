@@ -8,13 +8,14 @@
 
 **NutriPro** 是一款面向健身/运动人群的全功能营养管理平台，纯前端静态应用，零后端依赖（可选 Supabase 云同步）。
 
-- **当前版本**: v1.5.2
+- **当前版本**: v1.5.3
 - **技术栈**: 原生 HTML5 + CSS3 + Vanilla JavaScript（零框架）
 - **部署方式**: GitHub Pages / 任意静态托管
 - **离线支持**: Service Worker (cache-first 策略)
 - **图表库**: Chart.js 4.x（多 CDN 自动切换）
 - **云同步**: Supabase（国内可访问的 Firebase 替代品）
 - **截图导出**: html2canvas 1.4.1
+- **CSS 动画**: animate.css 4.x（页面/模态框动画）、Hover.css（hover 效果增强）
 
 ---
 
@@ -42,6 +43,7 @@ modules/            # JavaScript 模块
 ├── app.js          # 初始化 + 页面切换 + 事件绑定
 ├── health.js       # 健康追踪（训练/睡眠/饮水/HRV/照片）
 ├── supplements.js  # 补剂追踪器
+├── data-export.js  # 本地数据导出/导入（JSON 备份恢复，独立于 Supabase）
 └── db-compress.js  # 嵌入式数据库解压初始化
 archive/            # 历史版本归档
 ```
@@ -79,7 +81,7 @@ archive/            # 历史版本归档
 config.js → utils.js → state.js → cloud-sync.js → auth.js
 → admin.js → admin-food.js → admin-users.js → admin-key.js
 → food-render.js → calculators.js → diet.js → advice.js
-→ app.js → health.js → supplements.js
+→ app.js → health.js → supplements.js → data-export.js
 ```
 
 **注意**：修改模块顺序时必须确保所有依赖关系满足。
@@ -286,4 +288,4 @@ npx serve .
 
 ---
 
-*最后更新: 2026-06-20, NutriPro v1.5.2*
+*最后更新: 2026-06-20, NutriPro v1.5.3*

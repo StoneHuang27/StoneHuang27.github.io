@@ -628,29 +628,20 @@ function renderDietFoods() {
 
 function generateDietSummary() {
   try {
-  // Check prerequisites
-  if (!FOOD_DB || FOOD_DB.length === 0) {
-    document.getElementById('dietSummary').innerHTML = '<div class="calc-card"><p style="color:var(--warning);">⚠️ ' + (currentLang === 'zh' ? '食物数据库尚未加载，请稍后再试' : 'Food database not loaded, please try again') + '</p></div>';
-    return;
-  }
   const dietFoods = getDietFoodsForSelectedDates();
-  if (!dietFoods || dietFoods.length === 0) {
-    document.getElementById('dietSummary').innerHTML = '<div class="calc-card"><p style="color:var(--text-muted);">' + (currentLang === 'zh' ? '暂无饮食记录，请先添加食物' : 'No diet entries yet, please add foods first') + '</p></div>';
-    return;
-  }
-  let totalCal = dietFoods.reduce((s,d) => {
+  const totalCal = dietFoods.reduce((s,d) => {
     const f = FOOD_DB.find(x=>x.id===d.foodId);
     return s + (f ? parseFloat(f.energyKCal||0)*d.amount/100 : 0);
   }, 0);
-  let totalP = dietFoods.reduce((s,d) => {
+  const totalP = dietFoods.reduce((s,d) => {
     const f = FOOD_DB.find(x=>x.id===d.foodId);
     return s + (f ? parseFloat(f.protein||0)*d.amount/100 : 0);
   }, 0);
-  let totalC = dietFoods.reduce((s,d) => {
+  const totalC = dietFoods.reduce((s,d) => {
     const f = FOOD_DB.find(x=>x.id===d.foodId);
     return s + (f ? parseFloat(f.CHO||0)*d.amount/100 : 0);
   }, 0);
-  let totalF = dietFoods.reduce((s,d) => {
+  const totalF = dietFoods.reduce((s,d) => {
     const f = FOOD_DB.find(x=>x.id===d.foodId);
     return s + (f ? parseFloat(f.fat||0)*d.amount/100 : 0);
   }, 0);
@@ -702,13 +693,12 @@ function generateDietSummary() {
     const ctx = canvas.getContext('2d');
     if (typeof Chart === 'undefined') {
       // Chart.js not loaded — show text-based fallback
-      const summaryEl = document.getElementById('dietSummary');
-      if (summaryEl) {
-        const card = summaryEl.querySelector('.calc-card');
-        if (card) {
-          card.insertAdjacentHTML('beforeend', '<p style="color:var(--warning);font-size:12px;margin-top:8px;">' + (currentLang === 'zh' ? '⚠️ 图表库加载失败，上方数据已显示' : '⚠️ Chart.js failed to load, data shown above') + '</p>');
-        }
-      }
+      document.getElementById('dietSummary').querySelector('.result-item')?.parentElement?.appendChild(
+        Object.assign(document.createElement('p'), {
+          style: 'color:var(--warning);font-size:12px;margin-top:8px;',
+          textContent: currentLang === 'zh' ? '⚠️ 图表库未加载，数据已显示' : '⚠️ Chart.js not loaded, data shown above'
+        })
+      );
       console.warn('Chart.js not available, showing text fallback');
       return;
     }
@@ -747,15 +737,13 @@ function generateDietSummary() {
       console.error('Chart render error:', e);
     }
   }
-  // Draw chart immediately (DOM is already updated above)
-  setTimeout(drawChart, 10);
-  } catch(e) {
-    console.error('generateDietSummary error:', e);
-    const el = document.getElementById('dietSummary');
-    if (el) {
-      el.innerHTML = '<div class="calc-card"><p style="color:var(--warning);">⚠️ ' + (currentLang === 'zh' ? '生成摘要时出错: ' + e.message : 'Error generating summary: ' + e.message) + '</p></div>';
-    }
+  // Wait for DOM to be ready, then draw
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', drawChart);
+  } else {
+    setTimeout(drawChart, 50);
   }
+  } catch(e) { console.error('generateDietSummary error:', e); }
 }
 
 // ===== DIET PAGE RENDERING =====
@@ -765,6 +753,7 @@ function renderDietPage() {
   renderDietFoods();
   renderHealthDashboard();
   renderSupplementTracker();
+  generateDietSummary();
 }
 
 function renderDietDateControls() {
@@ -836,13 +825,7 @@ function addDietFood() {
     mealOptions += '<option value="ungrouped">' + (currentLang === 'zh' ? '未分组' : 'Ungrouped') + '</option>';
     mealSelect.innerHTML = mealOptions;
   }
-  const adm = document.getElementById('addDietModal');
-  const admInner = adm.querySelector('.modal');
-  if (admInner) {
-    admInner.classList.remove('animate__animated', 'animate__zoomOut');
-    admInner.classList.add('animate__animated', 'animate__zoomIn');
-  }
-  adm.classList.add('show');
+  document.getElementById('addDietModal').classList.add('show');
   document.getElementById('dietFoodSearch').value = '';
   document.getElementById('dietFoodSelect').value = '';
   document.getElementById('dietFoodAmount').value = 100;
@@ -862,15 +845,6 @@ function confirmAddDietFood() {
 }
 
 function closeAddDietModal() {
-  const modal = document.getElementById('addDietModal');
-  const inner = modal.querySelector('.modal');
-  if (inner) {
-    inner.classList.add('animate__animated', 'animate__zoomOut');
-    inner.addEventListener('animationend', function handler() {
-      inner.classList.remove('animate__animated', 'animate__zoomOut');
-      inner.removeEventListener('animationend', handler);
-    }, { once: true });
-  }
-  modal.classList.remove('show');
+  document.getElementById('addDietModal').classList.remove('show');
 }
 

@@ -102,7 +102,22 @@ input, select, textarea { font-family:inherit; }
 .tab-btn:hover { color: var(--text); background: rgba(59,130,246,0.1); }
 .tab-btn.active {
   color: var(--accent-light);
-  border-bottom-color: var(--accent);
+  border-bottom: 2px solid transparent;
+  position: relative;
+}
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--accent);
+  animation: tabSlideIn 0.25s ease forwards;
+}
+@keyframes tabSlideIn {
+  from { width: 0; }
+  to { width: 100%; }
 }
 
 /* ===== MAIN CONTENT ===== */
@@ -110,9 +125,24 @@ input, select, textarea { font-family:inherit; }
   margin-top: calc(var(--header-h) + var(--tab-h));
   padding: 20px;
   min-height: calc(100vh - var(--header-h) - var(--tab-h));
+  position: relative;
 }
-.page { display:none; }
-.page.active { display:block; }
+.page {
+  display: block;
+  opacity: 0;
+  visibility: hidden;
+  position: absolute;
+  width: 100%;
+  pointer-events: none;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+  will-change: opacity;
+}
+.page.active {
+  opacity: 1;
+  visibility: visible;
+  position: absolute;
+  pointer-events: auto;
+}
 .page.perm-locked { position:relative; min-height:400px; }
 
 /* ===== FOOD DATABASE PAGE ===== */
@@ -252,9 +282,9 @@ input, select, textarea { font-family:inherit; }
   position:relative;
 }
 .food-card:hover {
-  border-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(59,130,246,0.15);
+  border-color: var(--accent-light);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(59,130,246,0.25);
 }
 .food-card .name {
   font-size:15px; font-weight:600; margin-bottom:2px;
@@ -297,6 +327,7 @@ input, select, textarea { font-family:inherit; }
   position:fixed; inset:0; background:var(--modal-overlay);
   z-index:200; display:none; align-items:flex-start; justify-content:center;
   padding:40px 20px; overflow-y:auto;
+  transition: opacity 0.25s ease;
 }
 .modal-overlay.show { display:flex; }
 .modal {
@@ -305,6 +336,13 @@ input, select, textarea { font-family:inherit; }
   border-radius:12px;
   width:100%; max-width:900px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  transform: scale(0.95);
+  opacity: 0;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+.modal-overlay.show .modal {
+  transform: scale(1);
+  opacity: 1;
 }
 .modal-header {
   padding:20px 24px;
@@ -335,11 +373,16 @@ input, select, textarea { font-family:inherit; }
 .attr-header .arrow { transition:transform 0.2s; font-size:12px; }
 .attr-header.open .arrow { transform:rotate(180deg); }
 .attr-content {
-  padding:16px;
-  display:none;
-  background:var(--primary-light);
+  padding: 0 16px;
+  max-height: 0;
+  overflow: hidden;
+  background: var(--primary-light);
+  transition: max-height 0.3s ease, padding 0.3s ease;
 }
-.attr-content.show { display:block; }
+.attr-content.show {
+  max-height: 120vh;
+  padding: 16px;
+}
 
 /* Nutrient tables */
 .nutrient-table {
@@ -465,6 +508,11 @@ input, select, textarea { font-family:inherit; }
   border-radius:var(--radius);
   padding:24px;
   margin-bottom:20px;
+  transition: all 0.2s;
+}
+.calc-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 16px rgba(59,130,246,0.1);
 }
 .calc-card h3 {
   font-size:18px; margin-bottom:16px;
@@ -560,7 +608,7 @@ input, select, textarea { font-family:inherit; }
   cursor:pointer;
   transition:all 0.2s;
 }
-.user-card:hover { border-color:var(--accent); }
+.user-card:hover { border-color:var(--accent); box-shadow: 0 4px 12px rgba(59,130,246,0.2); }
 .user-card.active { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
 .user-card .name { font-weight:600; font-size:15px; }
 .user-card .info { font-size:12px; color:var(--text-muted); margin-top:4px; }
@@ -597,6 +645,12 @@ input, select, textarea { font-family:inherit; }
 .advice-card h3 { color:var(--accent-light); margin-bottom:12px; }
 
 /* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+  .food-sidebar { width: 180px; }
+  .calc-nav { width: 180px; }
+  .main { padding: 16px; }
+}
+
 @media (max-width: 768px) {
   .food-layout { flex-direction:column; }
   .food-sidebar { width:100%; position:static; max-height:200px; display:flex; flex-wrap:wrap; gap:4px; padding:8px; }
@@ -608,6 +662,16 @@ input, select, textarea { font-family:inherit; }
   .main { padding:12px; }
 }
 
+@media (max-width: 480px) {
+  .food-grid { grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); }
+  .calc-row { flex-direction: column; }
+  .calc-field { min-width: 100%; }
+  .compare-bar { flex-direction: column; align-items: stretch; }
+  .auth-card { padding: 24px; width: 95vw; }
+  .modal { max-width: 98vw; }
+  .modal-overlay { padding: 10px; }
+}
+
 /* ===== LOADING ===== */
 .loading { text-align:center; padding:40px; color:var(--text-muted); }
 .loading .spinner {
@@ -616,6 +680,7 @@ input, select, textarea { font-family:inherit; }
   border-top-color:var(--accent);
   border-radius:50%;
   animation: spin 0.8s linear infinite;
+  box-shadow: 0 0 8px rgba(59,130,246,0.4);
 }
 @keyframes spin { to { transform:rotate(360deg); } }
 @keyframes slideDown { from { transform:translateY(-30px);opacity:0; } to { transform:translateY(0);opacity:1; } }
@@ -624,6 +689,14 @@ input, select, textarea { font-family:inherit; }
 .badge {
   display:inline-block; padding:2px 8px; border-radius:10px;
   font-size:11px; font-weight:600;
+  transition: box-shadow 0.2s;
+}
+.badge:hover {
+  animation: badgePulse 1.5s ease-in-out infinite;
+}
+@keyframes badgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+  50% { box-shadow: 0 0 0 4px rgba(59,130,246,0.15); }
 }
 .badge-green { background:rgba(34,197,94,0.2); color:var(--success); }
 .badge-yellow { background:rgba(245,158,11,0.2); color:var(--warning); }
@@ -642,6 +715,11 @@ input, select, textarea { font-family:inherit; }
   background: linear-gradient(135deg, #0a1929 0%, #0f2b46 40%, #1a3d5c 100%);
   display:flex; align-items:center; justify-content:center;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  animation: authFadeIn 0.4s ease;
+}
+@keyframes authFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 .auth-overlay.hidden { display:none; }
 .auth-card {
@@ -765,9 +843,9 @@ input, select, textarea { font-family:inherit; }
 }
 .admin-backdrop {
   position:fixed; inset:0; background:rgba(0,0,0,0.4);
-  z-index:299; display:none;
+  z-index:299; display:none; opacity:0; transition: opacity 0.25s ease;
 }
-.admin-backdrop.show { display:block; }
+.admin-backdrop.show { display:block; opacity:1; }
 
 /* ===== PERMISSION LOCKED OVERLAY ===== */
 .perm-locked {

@@ -12,32 +12,10 @@ function switchToPage(page) {
     // For guests, show the locked page (it has overlay)
     // But don't block navigation - the perm-locked overlay handles it
   }
-  const pages = document.querySelectorAll('.page');
-  const oldActive = Array.from(pages).find(p => p.classList.contains('active'));
-
-  // Add fade-out to old page
-  if (oldActive) {
-    oldActive.classList.remove('active');
-    oldActive.classList.add('animate__animated', 'animate__fadeOut');
-    oldActive.addEventListener('animationend', function handler() {
-      oldActive.classList.remove('animate__animated', 'animate__fadeOut');
-      oldActive.removeEventListener('animationend', handler);
-    }, { once: true });
-  }
-
-  // Short delay for fade-out to be visible, then fade-in new page
-  setTimeout(() => {
-    const target = document.getElementById('page-'+page);
-    if (target) {
-      target.classList.add('active', 'animate__animated', 'animate__fadeIn');
-      target.addEventListener('animationend', function handler() {
-        target.classList.remove('animate__animated', 'animate__fadeIn');
-        target.removeEventListener('animationend', handler);
-      }, { once: true });
-    }
-  }, 80);
-
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const target = document.getElementById('page-'+page);
+  if (target) target.classList.add('active');
   const tabs = document.querySelectorAll('.tab-btn');
   const tabMap = {food:0,calc:1,diet:2,advice:3};
   if (tabMap[page] !== undefined && tabs[tabMap[page]]) tabs[tabMap[page]].classList.add('active');
@@ -331,13 +309,7 @@ function showFoodDetail(id) {
     </div>`;
 
   body.innerHTML = html;
-  const foodModal = document.getElementById('foodModal');
-  const foodModalInner = foodModal.querySelector('.modal');
-  if (foodModalInner) {
-    foodModalInner.classList.remove('animate__animated', 'animate__zoomOut');
-    foodModalInner.classList.add('animate__animated', 'animate__zoomIn');
-  }
-  foodModal.classList.add('show');
+  document.getElementById('foodModal').classList.add('show');
   // Draw macro pie chart (only if not guest)
   if (!isGuest) {
     setTimeout(() => {
@@ -360,29 +332,11 @@ function renderAATable(aas) {
     </table>`;
 }
 function toggleAttr(el) {
+  el.classList.toggle('open');
   const content = el.nextElementSibling;
-  if (el.classList.contains('open')) {
-    el.classList.remove('open');
-    content.classList.remove('show');
-    content.style.maxHeight = '0';
-  } else {
-    el.classList.add('open');
-    content.classList.add('show');
-    content.style.maxHeight = content.scrollHeight + 'px';
-  }
+  content.classList.toggle('show');
 }
-function closeModal() {
-  const modal = document.getElementById('foodModal');
-  const modalInner = modal.querySelector('.modal');
-  if (modalInner) {
-    modalInner.classList.add('animate__animated', 'animate__zoomOut');
-    modalInner.addEventListener('animationend', function handler() {
-      modalInner.classList.remove('animate__animated', 'animate__zoomOut');
-      modalInner.removeEventListener('animationend', handler);
-    }, { once: true });
-  }
-  modal.classList.remove('show');
-}
+function closeModal() { document.getElementById('foodModal').classList.remove('show'); }
 
 // ===== RANKING =====
 function showRanking(attr) {

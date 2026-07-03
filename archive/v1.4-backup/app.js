@@ -6,29 +6,11 @@ function showSettings() {
   // Set energy unit radio
   const radios = document.querySelectorAll('input[name="energyUnit"]');
   radios.forEach(function(r) { r.checked = (r.value === energyUnit); });
-  const sm = document.getElementById('settingsModal');
-  const smInner = sm.querySelector('.modal');
-  if (smInner) {
-    smInner.classList.remove('animate__animated', 'animate__zoomOut');
-    smInner.classList.add('animate__animated', 'animate__zoomIn');
-  }
-  sm.classList.add('show');
+  document.getElementById('settingsModal').classList.add('show');
 }
-function closeSettings() {
-  const sm = document.getElementById('settingsModal');
-  const smInner = sm.querySelector('.modal');
-  if (smInner) {
-    smInner.classList.remove('animate__animated', 'animate__zoomIn');
-    smInner.classList.add('animate__animated', 'animate__zoomOut');
-    smInner.addEventListener('animationend', function handler() {
-      smInner.classList.remove('animate__animated', 'animate__zoomOut');
-      smInner.removeEventListener('animationend', handler);
-    }, { once: true });
-  }
-  sm.classList.remove('show');
-}
+function closeSettings() { document.getElementById('settingsModal').classList.remove('show'); }
 function saveSettings() {
-  siteName = document.getElementById('settingSiteName').value || 'NutriPro v1.5.3 运动营养数据平台';
+  siteName = document.getElementById('settingSiteName').value || 'NutriPro v1.5 运动营养数据平台';
   localStorage.setItem('nutripro_siteName', siteName);
   applySiteName();
   // Save energy unit preference
@@ -41,8 +23,8 @@ function saveSettings() {
 }
 function applySiteName() {
   var el = document.getElementById('siteNameSpan');
-  if (el) el.textContent = siteName || 'NutriPro v1.5.3 运动营养数据平台';
-  document.title = (siteName || 'NutriPro v1.5.3 运动营养数据平台') + t('title_suffix');
+  if (el) el.textContent = siteName || 'NutriPro v1.5 运动营养数据平台';
+  document.title = (siteName || 'NutriPro v1.5 运动营养数据平台') + t('title_suffix');
 }
 function toggleFilter(type) {
   if (type === 'fodmap') {

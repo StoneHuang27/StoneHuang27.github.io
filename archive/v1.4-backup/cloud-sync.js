@@ -340,11 +340,6 @@ const CloudSync = {
 // Supabase config UI functions
 function openFirebaseConfig() {
   const modal = document.getElementById('firebaseConfigModal');
-  const modalInner = modal.querySelector('.modal');
-  if (modalInner) {
-    modalInner.classList.remove('animate__animated', 'animate__zoomOut');
-    modalInner.classList.add('animate__animated', 'animate__zoomIn');
-  }
   modal.classList.add('show');
   const savedConfig = localStorage.getItem('nutripro_supabaseConfig');
   if (savedConfig) {
@@ -378,16 +373,7 @@ function updateSdkStatus() {
   }
 }
 function closeFirebaseConfig() {
-  const modal = document.getElementById('firebaseConfigModal');
-  const inner = modal.querySelector('.modal');
-  if (inner) {
-    inner.classList.add('animate__animated', 'animate__zoomOut');
-    inner.addEventListener('animationend', function handler() {
-      inner.classList.remove('animate__animated', 'animate__zoomOut');
-      inner.removeEventListener('animationend', handler);
-    }, { once: true });
-  }
-  modal.classList.remove('show');
+  document.getElementById('firebaseConfigModal').classList.remove('show');
 }
 
 // Parse Supabase config (JSON with url and anonKey)

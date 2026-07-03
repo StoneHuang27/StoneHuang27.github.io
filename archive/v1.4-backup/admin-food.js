@@ -86,27 +86,12 @@ function openFoodEditModal(foodId) {
       <button class="auth-btn auth-btn-secondary" style="width:auto;padding:8px 20px;" onclick="closeFoodEditModal()">取消</button>
     </div>
   `;
-
-  const fmo = document.getElementById('foodEditModalOverlay');
-  const fmoInner = fmo.querySelector('.modal');
-  if (fmoInner) {
-    fmoInner.classList.remove('animate__animated', 'animate__zoomOut');
-    fmoInner.classList.add('animate__animated', 'animate__zoomIn');
-  }
-  fmo.classList.add('show');
+  
+  document.getElementById('foodEditModalOverlay').classList.add('show');
 }
 
 function closeFoodEditModal() {
-  const modal = document.getElementById('foodEditModalOverlay');
-  const inner = modal.querySelector('.modal');
-  if (inner) {
-    inner.classList.add('animate__animated', 'animate__zoomOut');
-    inner.addEventListener('animationend', function handler() {
-      inner.classList.remove('animate__animated', 'animate__zoomOut');
-      inner.removeEventListener('animationend', handler);
-    }, { once: true });
-  }
-  modal.classList.remove('show');
+  document.getElementById('foodEditModalOverlay').classList.remove('show');
 }
 
 function getFoodEditData() {
@@ -304,11 +289,6 @@ function openAppModal(type, target) {
   appModalType = type;
   appModalTarget = target || '';
   const modal = document.getElementById('appModalOverlay');
-  const modalInner = modal.querySelector('.app-modal');
-  if (modalInner) {
-    modalInner.classList.remove('animate__animated', 'animate__zoomOut');
-    modalInner.classList.add('animate__animated', 'animate__zoomIn');
-  }
   const titleEl = document.getElementById('appModalTitle');
   const permSelect = document.getElementById('appPermSelect');
   const permLabel = document.getElementById('appPermLabel');
@@ -328,16 +308,7 @@ function openAppModal(type, target) {
 }
 
 function closeAppModal() {
-  const modal = document.getElementById('appModalOverlay');
-  const modalInner = modal.querySelector('.app-modal');
-  if (modalInner) {
-    modalInner.classList.add('animate__animated', 'animate__zoomOut');
-    modalInner.addEventListener('animationend', function handler() {
-      modalInner.classList.remove('animate__animated', 'animate__zoomOut');
-      modalInner.removeEventListener('animationend', handler);
-    }, { once: true });
-  }
-  modal.classList.remove('show');
+  document.getElementById('appModalOverlay').classList.remove('show');
 }
 
 function submitApplication() {
