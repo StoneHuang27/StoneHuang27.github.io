@@ -1,0 +1,17 @@
+name: Keep Supabase Alive
+
+# Keeps the free-tier Supabase project active by sending a lightweight
+# read request before the 7-day inactivity pause threshold is reached.
+on:
+  schedule:
+    - cron: '0 4 */6 * *'   # every 6 days at 04:00 UTC (under the 7-day limit)
+  workflow_dispatch:        # allows manual "Run workflow" to test immediately
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST endpoint
+        run: |
+          curl -fsS -o /dev/null -w "HTTP %{http_code}\n" \
+            "https://daurcikmobtdpwowdsyg.supabase.co/rest/v1/admin_config?select=key&limit=1"
