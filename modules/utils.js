@@ -49,6 +49,7 @@ const i18n = {
     bmi: "BMI计算器", bodyfat_navy: "体脂率估算(US Navy)",
     protein_need: "蛋白质需求", water_need: "水分需求",
     macro_ratio: "宏量配比计算",
+    rpe_load: "RPE负荷管理", rpe_desc: "输入每日训练时长与RPE，计算sRPE、周负荷、单调度与应激。", rpe_weekly_load: "周负荷", rpe_daily_avg: "日均负荷", rpe_daily_sd: "日负荷SD", rpe_monotony: "单调度", rpe_strain: "应激", rpe_risk: "负荷风险", rpe_add_session: "添加训练", rpe_activity: "活动/项目", rpe_weekday: "星期", rpe_rpe: "RPE(0-10)", rpe_duration: "时长(分钟)", rpe_srpe: "sRPE", rpe_session: "训练", rpe_import_today: "导入今日训练", rpe_save: "保存", rpe_clear_week: "清空本周", rpe_export_csv: "导出CSV", rpe_no_session: "本周暂无训练记录，点击上方添加或导入今日训练。", rpe_link_health: "数据已同步至健康记录", rpe_prev_week: "上一周", rpe_next_week: "下一周", rpe_this_week: "本周", rpe_low_risk: "低风险：结构可接受", rpe_mid_risk: "中风险：开始单调，建议增加波动", rpe_high_risk: "高风险：立即降量/加恢复", rpe_trend: "近8周周负荷趋势",
     // Categories
     cat_all: "全部", cat_grain: "谷薯类", cat_veg: "蔬菜类",
     cat_fruit: "水果类", cat_meat: "畜禽肉类", cat_seafood: "水产类",
@@ -103,6 +104,7 @@ const i18n = {
     bmi: "BMI Calculator", bodyfat_navy: "Body Fat (Navy)",
     protein_need: "Protein Needs", water_need: "Water Needs",
     macro_ratio: "Macro Ratio",
+    rpe_load: "RPE Load Monitor", rpe_desc: "Enter daily training duration and RPE to compute sRPE, weekly load, monotony and strain.", rpe_weekly_load: "Weekly Load", rpe_daily_avg: "Daily Avg", rpe_daily_sd: "Daily SD", rpe_monotony: "Monotony", rpe_strain: "Strain", rpe_risk: "Load Risk", rpe_add_session: "Add Session", rpe_activity: "Activity", rpe_weekday: "Day", rpe_rpe: "RPE (0-10)", rpe_duration: "Duration (min)", rpe_srpe: "sRPE", rpe_session: "Session", rpe_import_today: "Import Today", rpe_save: "Save", rpe_clear_week: "Clear Week", rpe_export_csv: "Export CSV", rpe_no_session: "No sessions this week. Add above or import today's training.", rpe_link_health: "Synced to health records", rpe_prev_week: "Prev Week", rpe_next_week: "Next Week", rpe_this_week: "This Week", rpe_low_risk: "Low risk: acceptable structure", rpe_mid_risk: "Moderate risk: increasing monotony, add variation", rpe_high_risk: "High risk: reduce load", rpe_trend: "Weekly Load Trend (8 weeks)",
     cat_all: "All", cat_grain: "Grains", cat_veg: "Vegetables",
     cat_fruit: "Fruits", cat_meat: "Meat", cat_seafood: "Seafood",
     cat_dairy: "Dairy", cat_egg: "Eggs", cat_legume: "Legumes",

@@ -581,6 +581,34 @@ input, select, textarea { font-family:inherit; }
 }
 .btn-primary:hover { background:var(--accent-dark); }
 
+/* ===== RPE LOAD MONITOR ===== */
+.rpe-kpis {
+  display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:8px;
+}
+@media(min-width:720px){ .rpe-kpis { grid-template-columns:repeat(5,1fr); } }
+.rpe-kpi {
+  background:var(--primary-lighter); border:1px solid var(--border);
+  border-radius:var(--radius); padding:12px; text-align:center;
+}
+.rpe-kpi .lab { font-size:12px; color:var(--text-muted); }
+.rpe-kpi .val { font-size:20px; font-weight:700; margin-top:6px; color:var(--accent-light); }
+.rpe-risk {
+  padding:10px 14px; border-radius:var(--radius); border:1px solid var(--border);
+  font-size:14px; font-weight:600; background:var(--primary-lighter);
+}
+.rpe-table { width:100%; border-collapse:collapse; margin-top:6px; }
+.rpe-table th {
+  background:var(--primary-lighter); color:var(--text-muted); font-size:12px;
+  padding:8px; border-bottom:1px solid var(--border); text-align:center;
+}
+.rpe-table td {
+  padding:8px; border-bottom:1px solid rgba(45,90,123,0.3); text-align:center; font-size:14px;
+}
+.rpe-table tr:last-child td { border-bottom:0; }
+.rpe-badge.good { color:var(--success); }
+.rpe-badge.warn { color:var(--warning); }
+.rpe-badge.bad { color:var(--danger); }
+
 /* ===== FORMULA MODAL ===== */
 .formula-box {
   background:var(--primary);

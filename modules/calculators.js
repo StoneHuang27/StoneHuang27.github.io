@@ -12,6 +12,7 @@ const CALC_DEFS = [
   {id:'protein',icon:'🥩',nameKey:'protein_need'},
   {id:'water',icon:'💧',nameKey:'water_need'},
   {id:'macro',icon:'📊',nameKey:'macro_ratio'},
+  {id:'rpe',icon:'🏃',nameKey:'rpe_load'},
 ];
 
 const FORMULAS = {
@@ -137,6 +138,37 @@ function switchCalc(id, el) {
       <div id="macro_result"></div>
       <div class="calc-actions"><button class="btn-action" onclick="exportResult('macro_result')">${t('export_result')}</button></div>
     </div>`,
+    rpe: `<div class="calc-card"><h3>🏃 ${t('rpe_load')}</h3>
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:14px;">${t('rpe_desc')}</p>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        <button class="btn-action" onclick="rpeShiftWeek(-1)">◀ ${t('rpe_prev_week')}</button>
+        <span id="rpeWeekLabel" style="font-weight:600;min-width:150px;text-align:center;"></span>
+        <button class="btn-action" onclick="rpeShiftWeek(1)">${t('rpe_next_week')} ▶</button>
+        <button class="btn-action" onclick="rpeImportToday()">${t('rpe_import_today')}</button>
+        <button class="btn-action" onclick="rpeClearWeek()">${t('rpe_clear_week')}</button>
+        <button class="btn-action" onclick="rpeExportCSV()">${t('rpe_export_csv')}</button>
+      </div>
+      <div id="rpeKpis" class="rpe-kpis"></div>
+      <div class="rpe-risk" id="rpeRisk" style="margin-top:12px;"></div>
+      <div class="calc-card" style="margin-top:16px;">
+        <h4>➕ ${t('rpe_add_session')}</h4>
+        <div class="calc-row">
+          <div class="calc-field"><label>${t('rpe_weekday')}</label><select id="rpeDay">${rpeWeekdayOptions()}</select></div>
+          <div class="calc-field"><label>${t('rpe_activity')}</label><input type="text" id="rpeActivity" placeholder="e.g. 深蹲"></div>
+          <div class="calc-field"><label>${t('rpe_rpe')}</label><input type="number" id="rpeRpe" min="0" max="10" step="0.5" value="5"></div>
+          <div class="calc-field"><label>${t('rpe_duration')}</label><input type="number" id="rpeDuration" min="0" value="60"></div>
+        </div>
+        <button class="btn-primary" onclick="rpeAddSession()">${t('rpe_add_session')}</button>
+      </div>
+      <div class="calc-card" style="margin-top:16px;">
+        <h4>📋 ${t('rpe_session')}</h4>
+        <div id="rpeTable"></div>
+      </div>
+      <div class="calc-card" style="margin-top:16px;">
+        <h4>📈 ${t('rpe_trend')}</h4>
+        <canvas id="rpeTrendChart" width="600" height="180" style="width:100%;"></canvas>
+      </div>
+    </div>`,
   };
   main.innerHTML = html[id] || '';
   // Navy body fat - show hip for female
@@ -148,6 +180,10 @@ function switchCalc(id, el) {
       });
       document.getElementById('navy_hip_field').style.display = g.value === 'female' ? 'block' : 'none';
     }
+  }
+  // RPE load monitor - render dynamic content
+  if (id === 'rpe') {
+    renderRpeModule();
   }
 }
 
